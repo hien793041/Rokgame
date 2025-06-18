@@ -1,3 +1,7 @@
+import io
+import sys
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer,encoding='utf-8')
+
 import pyautogui
 import cv2
 import numpy as np
@@ -29,14 +33,16 @@ def find_button(image_path):
     if not os.path.exists(image_path):
         print(f"Lỗi: Không tìm thấy {image_path}")
         return None
+    print(f"Đang tìm ảnh: {image_path}")
     template = cv2.imread(image_path, 0)  # Đọc hình ảnh nút (grayscale)
     screen = np.array(pyautogui.screenshot())  # Chụp màn hình
     screen = cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)  # Chuyển sang grayscale
     res = cv2.matchTemplate(screen, template, cv2.TM_CCOEFF_NORMED)  # So khớp
     _, max_val, _, max_loc = cv2.minMaxLoc(res)
-    if max_val > 0.8:  # Ngưỡng độ chính xác
+    if max_val > 0.7:  # Ngưỡng độ chính xác
         # Trả về tâm của nút (tính từ góc trên-trái)
         h, w = template.shape
+        print(f"Ảnh tìm thấy với độ chính xác: {max_val}")
         return (max_loc[0] + w // 2, max_loc[1] + h // 2)
     return None
 
