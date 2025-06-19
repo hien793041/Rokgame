@@ -11,8 +11,8 @@ import os
 
 # Constants
 MAX_RETRIES = 50
-MIN_RETRY_WAIT = 7
-MAX_RETRY_WAIT = 10
+MIN_RETRY_WAIT = 2
+MAX_RETRY_WAIT = 3
 
 # Cấu hình PyAutoGUI
 pyautogui.FAILSAFE = True  # Di chuột góc trên-trái để dừng bot
@@ -130,7 +130,7 @@ def main():
                 print("Bỏ qua nút Gửi quân sau 50 lần thử.", flush=True)
                 continue
 
-            time.sleep(random.uniform(3, 7))  # Chờ trước khi lặp
+            time.sleep(random.uniform(MIN_RETRY_WAIT, MAX_RETRY_WAIT))  # Chờ trước khi lặp
     except KeyboardInterrupt:
         print("Bot đã dừng.", flush=True)
 
