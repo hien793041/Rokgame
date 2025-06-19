@@ -59,7 +59,7 @@ def click_button(image_path):
 def main():
     """Chạy bot chính"""
     print("Bot farm barbarians RoK khởi động sau 5 giây...")
-    time.sleep(5)  # Chờ để chuyển sang giả lập
+    time.sleep(2)  # Chờ để chuyển sang giả lập
     try:
         while True:
             print("Đang tìm và tấn công barbarians...", flush=True)
@@ -109,15 +109,15 @@ def main():
                 continue
 
             # Tìm và click nút "Chọn quân"
-            for _ in range(MAX_RETRIES):
-                if click_button(ASSET_PATHS["select_troop_button"]):
-                    time.sleep(random.uniform(1, 3))
-                    break
-                print(f"Không tìm thấy nút Chọn quân, thử lại... lần thứ {_ + 1}", flush=True)
-                time.sleep(random.uniform(MIN_RETRY_WAIT, MAX_RETRY_WAIT))
-            else:
-                print("Bỏ qua nút Chọn quân sau 50 lần thử.", flush=True)
-                continue
+            # for _ in range(MAX_RETRIES):
+            #     if click_button(ASSET_PATHS["select_troop_button"]):
+            #         time.sleep(random.uniform(1, 3))
+            #         break
+            #     print(f"Không tìm thấy nút Chọn quân, thử lại... lần thứ {_ + 1}", flush=True)
+            #     time.sleep(random.uniform(MIN_RETRY_WAIT, MAX_RETRY_WAIT))
+            # else:
+            #     print("Bỏ qua nút Chọn quân sau 50 lần thử.", flush=True)
+            #     continue
 
             # Tìm và click nút "Gửi quân"
             for _ in range(MAX_RETRIES):
