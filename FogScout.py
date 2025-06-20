@@ -1,153 +1,118 @@
 import io
 import sys
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer,encoding='utf-8')
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 import pyautogui
-import cv2
-import numpy as np
 import time
 import random
-import os
+from bot_utils import click_button, ensure_assets_directory
 
-# Constants
-MAX_RETRIES = 200
-# Constants
-MIN_RETRY_WAIT = 1
-MAX_RETRY_WAIT = 2
+class Config:
+    """Configuration constants for the fog scout bot"""
+    MAX_RETRIES = 200
+    MIN_RETRY_WAIT = 1
+    MAX_RETRY_WAIT = 2
+    STARTUP_DELAY = 2
+    SCREENSHOT_PAUSE = 0.5
+    LOAD_WAIT_TIME = 2
 
-# Cấu hình PyAutoGUI
-pyautogui.FAILSAFE = True  # Di chuột góc trên-trái để dừng bot
-pyautogui.PAUSE = 0.5      # Độ trễ giữa các thao tác (giây)
+# Configure PyAutoGUI
+pyautogui.FAILSAFE = True
+pyautogui.PAUSE = Config.SCREENSHOT_PAUSE
 
-# Đường dẫn đến hình ảnh nút (lưu trong thư mục assets)
-ASSET_PATHS = {
-    "scout_camp": "assets/fog/scout_camp.png",    # Nút Trại Trinh Sát
-    "explore_button": "assets/fog/explore_button.png", # Nút Thăm dò
-    "confirm_button": "assets/fog/confirm_button.png",    # Nút Xác nhận
-    "send_button": "assets/fog/send_button.png",          # Nút Gửi
-    "back_button": "assets/fog/back_button.png"          # Nút Quay lại
-}
+class AssetPaths:
+    """Asset file paths for fog scout UI elements"""
+    BASE_DIR = "assets/fog"
+    
+    SCOUT_CAMP = f"{BASE_DIR}/scout_camp.png"
+    EXPLORE = f"{BASE_DIR}/explore_button.png"
+    CONFIRM = f"{BASE_DIR}/confirm_button.png"
+    SEND = f"{BASE_DIR}/send_button.png"
+    BACK = f"{BASE_DIR}/back_button.png"
 
-def find_button(image_path):
-    """Tìm vị trí nút trên màn hình bằng nhận diện hình ảnh"""
-    if not os.path.exists(image_path):
-        print(f"Lỗi: Không tìm thấy {image_path}", flush=True)
-        return None
-    print(f"Đang tìm ảnh: {image_path}", flush=True)
-    template = cv2.imread(image_path, 0)  # Đọc hình ảnh nút (grayscale)
-    screen = np.array(pyautogui.screenshot())  # Chụp màn hình
-    screen = cv2.cvtColor(screen, cv2.COLOR_RGB2GRAY)  # Chuyển sang grayscale
-    res = cv2.matchTemplate(screen, template, cv2.TM_CCOEFF_NORMED)  # So khớp
-    _, max_val, _, max_loc = cv2.minMaxLoc(res)
-    if max_val > 0.7:  # Ngưỡng độ chính xác
-        # Trả về tâm của nút (tính từ góc trên-trái)
-        h, w = template.shape
-        print(f"Ảnh tìm thấy với độ chính xác: {max_val}")
-        return (max_loc[0] + w // 2, max_loc[1] + h // 2)
-    return None
 
-def click_button(image_path):
-    """Click vào nút nếu tìm thấy"""
-    pos = find_button(image_path)
-    if pos:
-        print(f"Click vào {image_path} tại {pos}", flush=True)
-        pyautogui.click(*pos)
-        return True
-    print(f"Không tìm thấy {image_path}", flush=True)
-    return False
-
-def open_scout_camp():
-    """Mở Trại Trinh Sát"""
-    print("Đang mở Trại Trinh Sát...", flush=True)
-    for i in range(MAX_RETRIES):
-        if click_button(ASSET_PATHS["scout_camp"]):
-            time.sleep(2)  # Chờ màn hình load
+def open_scout_camp() -> bool:
+    """Open scout camp interface"""
+    print("Opening scout camp...", flush=True)
+    
+    for attempt in range(Config.MAX_RETRIES):
+        if click_button(AssetPaths.SCOUT_CAMP):
+            time.sleep(Config.LOAD_WAIT_TIME)
             return True
-        print(f"Không tìm thấy scout_camp, thử lại lần {i+1}...", flush=True)
+        print(f"Scout camp not found, retry {attempt + 1}/{Config.MAX_RETRIES}", flush=True)
         time.sleep(random.uniform(3, 5))
+    
+    print(f"Failed to open scout camp after {Config.MAX_RETRIES} attempts", flush=True)
     return False
 
-def send_scout():
-    """Gửi trinh sát dò sương, thử lại sau 3s nếu không tìm thấy nút"""
-    print("Đang gửi trinh sát...", flush=True)
+def try_click_button_with_retry(button_path: str, button_name: str, wait_time: float = None) -> bool:
+    """Attempt to click a button with retries"""
+    if wait_time is None:
+        wait_time = random.uniform(0.5, 1)
+        
+    for attempt in range(Config.MAX_RETRIES):
+        if click_button(button_path):
+            time.sleep(wait_time)
+            return True
+        print(f"Button '{button_name}' not found, retry {attempt + 1}/{Config.MAX_RETRIES}", flush=True)
+        time.sleep(random.uniform(Config.MIN_RETRY_WAIT, Config.MAX_RETRY_WAIT))
+    
+    print(f"Skipping '{button_name}' after {Config.MAX_RETRIES} attempts", flush=True)
+    return False
 
-    # Thử tìm nút Thăm dò
-    for _ in range(MAX_RETRIES):  # Thử 50 lần
-        if click_button(ASSET_PATHS["explore_button"]):
-            time.sleep(random.uniform(0.5, 1))
-            break
-        print("Không tìm thấy explore_button, thử lại sau 3s... lần thứ " + str(_ + 1), flush=True)
-        time.sleep(random.uniform(MIN_RETRY_WAIT, MAX_RETRY_WAIT))
-    else:
-        print("Bỏ qua explore_button sau 50 lần thử.", flush=True)
+def send_scout() -> bool:
+    """Send scout to explore fog of war"""
+    print("Sending scout...", flush=True)
+    
+    scout_sequence = [
+        (AssetPaths.EXPLORE, "Explore", 0.75),
+        (AssetPaths.CONFIRM, "First Confirm", 0.75),
+        (AssetPaths.CONFIRM, "Second Confirm", 0.75),
+        (AssetPaths.SEND, "Send", 0.75),
+        (AssetPaths.BACK, "Back", 2.0)
+    ]
+    
+    for button_path, button_name, wait_time in scout_sequence:
+        if not try_click_button_with_retry(button_path, button_name, wait_time):
+            return False
+    
+    return True
+
+def execute_fog_scout_cycle() -> bool:
+    """Execute complete fog scouting cycle"""
+    if not open_scout_camp():
+        print("Failed to open scout camp, retrying...", flush=True)
         return False
-
-    # Thử tìm nút Xác nhận (lần 1)
-    for _ in range(MAX_RETRIES):
-        if click_button(ASSET_PATHS["confirm_button"]):
-            time.sleep(random.uniform(0.5, 1))
-            break
-        print("Không tìm thấy confirm_button, thử lại sau 7s... lần thứ " + str(_ + 1), flush=True)
-        time.sleep(random.uniform(MIN_RETRY_WAIT, MAX_RETRY_WAIT))
-    else:
-        print("Bỏ qua confirm_button sau 50 lần thử.", flush=True)
+        
+    if not send_scout():
+        print("Failed to send scout, retrying...", flush=True)
         return False
-
-    # Thử tìm nút Xác nhận (lần 2) - confirm_more
-    for _ in range(MAX_RETRIES):
-        if click_button(ASSET_PATHS["confirm_button"]):
-            time.sleep(random.uniform(0.5, 1))
-            break
-        print("Không tìm thấy confirm_more, thử lại sau 7s... lần thứ " + str(_ + 1), flush=True)
-        time.sleep(random.uniform(MIN_RETRY_WAIT, MAX_RETRY_WAIT))
-    else:
-        print("Bỏ qua confirm_more sau 50 lần thử.", flush=True)
-        return False
-
-    # Thử tìm nút Gửi
-    for _ in range(MAX_RETRIES):
-        if click_button(ASSET_PATHS["send_button"]):
-            time.sleep(random.uniform(0.5, 1))
-            break
-        print("Không tìm thấy send_button, thử lại sau 3s... lần thứ " + str(_ + 1), flush=True)
-        time.sleep(random.uniform(MIN_RETRY_WAIT, MAX_RETRY_WAIT))
-    else:
-        print("Bỏ qua send_button sau 50 lần thử.", flush=True)
-        return False
-
-    # Thử tìm nút Quay lại
-    for _ in range(MAX_RETRIES):
-        if click_button(ASSET_PATHS["back_button"]):
-            time.sleep(2)
-            break
-        print("Không tìm thấy back_button, thử lại sau 3s... lần thứ " + str(_ + 1), flush=True)
-        time.sleep(random.uniform(MIN_RETRY_WAIT, MAX_RETRY_WAIT))
-    else:
-        print("Bỏ qua back_button sau 50 lần thử.", flush=True)
-        return False
-
+        
     return True
 
 def main():
-    """Chạy bot chính"""
-    print("Bot dò sương RoK khởi động sau 2 giây...", flush=True)
-    time.sleep(2)  # Chờ để chuyển sang giả lập
+    """Main bot execution"""
+    print(f"RoK Fog Scout Bot starting in {Config.STARTUP_DELAY} seconds...", flush=True)
+    time.sleep(Config.STARTUP_DELAY)
+    
     try:
         while True:
-            if not open_scout_camp():
-                print("Lỗi mở Trại Trinh Sát, thử lại...", flush=True)
+            print("Starting fog scout cycle...", flush=True)
+            
+            if execute_fog_scout_cycle():
+                print("Scout cycle completed successfully", flush=True)
+            else:
+                print("Scout cycle failed, waiting before retry...", flush=True)
                 time.sleep(5)
                 continue
-            if not send_scout():
-                print("Lỗi gửi trinh sát, thử lại...", flush=True)
-                time.sleep(5)
-                continue
-            time.sleep(random.uniform(MIN_RETRY_WAIT, MAX_RETRY_WAIT))  # Chờ trước khi lặp
+                
+            time.sleep(random.uniform(Config.MIN_RETRY_WAIT, Config.MAX_RETRY_WAIT))
+            
     except KeyboardInterrupt:
-        print("Bot đã dừng.", flush=True)
+        print("Bot stopped by user", flush=True)
+    except Exception as e:
+        print(f"Unexpected error: {e}", flush=True)
 
 if __name__ == "__main__":
-    # Kiểm tra thư mục assets
-    if not os.path.exists("assets"):
-        os.makedirs("assets")
+    ensure_assets_directory()
     main()
