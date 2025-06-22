@@ -52,7 +52,9 @@ def execute_archers_sequence() -> bool:
         check_and_click_close_esc()
         check_and_click_go_home()
         
-        # Click troop house
+        # Click troop house (2 times)
+        if not try_click_button(AssetPaths.TROOP_HOUSE):
+            return False
         if not try_click_button(AssetPaths.TROOP_HOUSE):
             return False
         

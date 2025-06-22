@@ -1,5 +1,5 @@
 """
-Combo Bot - Clean and optimized alternating Fog Scout and Barbarian Farming
+Combo Bot - Fog Scout + Barbarian Farming + Troop Training (6-activity cycle)
 """
 import io
 import sys
@@ -9,13 +9,24 @@ import pyautogui
 import time
 from enum import Enum
 from bot_utils import ensure_assets_directory
-from sequences import execute_fog_scout_sequence, execute_barbarian_farm_sequence
+from sequences import (
+    execute_fog_scout_sequence, 
+    execute_barbarian_farm_sequence,
+    execute_infantry_sequence,
+    execute_archers_sequence,
+    execute_cavalry_sequence,
+    execute_siege_sequence
+)
 
 
 class ActivityType(Enum):
     """Types of activities the bot can perform"""
     FOG_SCOUT = "fog_scout"
     BARBARIAN_FARM = "barbarian_farm"
+    INFANTRY = "infantry"
+    ARCHERS = "archers"
+    CAVALRY = "cavalry"
+    SIEGE = "siege"
 
 
 class Config:
@@ -28,60 +39,89 @@ class Config:
 class ActivityTracker:
     """Track current activity and entry counts"""
     def __init__(self):
-        self.current_activity = ActivityType.FOG_SCOUT
-        self.fog_scout_entries = 0
-        self.barbarian_farm_entries = 0
+        self.activities = [
+            ActivityType.FOG_SCOUT,
+            ActivityType.BARBARIAN_FARM,
+            ActivityType.INFANTRY,
+            ActivityType.ARCHERS,
+            ActivityType.CAVALRY,
+            ActivityType.SIEGE
+        ]
+        self.current_index = 0
+        self.activity_counts = {activity: 0 for activity in self.activities}
         self.total_cycles = 0
+    
+    @property
+    def current_activity(self):
+        """Get current activity"""
+        return self.activities[self.current_index]
     
     def get_current_entries(self):
         """Get current entry count for active activity"""
-        return (self.fog_scout_entries if self.current_activity == ActivityType.FOG_SCOUT 
-                else self.barbarian_farm_entries)
+        return self.activity_counts[self.current_activity]
     
     def increment_current_entries(self):
         """Increment entry count for current activity"""
-        if self.current_activity == ActivityType.FOG_SCOUT:
-            self.fog_scout_entries += 1
-        else:
-            self.barbarian_farm_entries += 1
+        self.activity_counts[self.current_activity] += 1
     
     def should_switch_activity(self):
         """Always switch after each single cycle"""
         return True
     
     def switch_activity(self):
-        """Switch to other activity and reset counter"""
-        if self.current_activity == ActivityType.FOG_SCOUT:
-            self.current_activity = ActivityType.BARBARIAN_FARM
-            self.fog_scout_entries = 0
-        else:
-            self.current_activity = ActivityType.FOG_SCOUT
-            self.barbarian_farm_entries = 0
+        """Switch to next activity in sequence"""
+        self.current_index = (self.current_index + 1) % len(self.activities)
         
-        self.total_cycles += 1
-        activity_name = ("Trinh Sát Sương Mù" if self.current_activity == ActivityType.FOG_SCOUT 
-                        else "Farm Barbarian")
+        if self.current_index == 0:  # Completed full cycle
+            self.total_cycles += 1
+        
+        activity_names = {
+            ActivityType.FOG_SCOUT: "Trinh Sát Sương Mù",
+            ActivityType.BARBARIAN_FARM: "Farm Barbarian",
+            ActivityType.INFANTRY: "Huấn Luyện Bộ Binh",
+            ActivityType.ARCHERS: "Huấn Luyện Cung Thủ",
+            ActivityType.CAVALRY: "Huấn Luyện Kỵ Binh",
+            ActivityType.SIEGE: "Huấn Luyện Công Thành"
+        }
+        
+        activity_name = activity_names[self.current_activity]
         print(f"Đã chuyển sang {activity_name}", flush=True)
     
     def print_status(self):
         """Print current status"""
-        activity_name = ("Trinh Sát Sương Mù" if self.current_activity == ActivityType.FOG_SCOUT 
-                        else "Farm Barbarian")
+        activity_names = {
+            ActivityType.FOG_SCOUT: "Trinh Sát Sương Mù",
+            ActivityType.BARBARIAN_FARM: "Farm Barbarian",
+            ActivityType.INFANTRY: "Huấn Luyện Bộ Binh",
+            ActivityType.ARCHERS: "Huấn Luyện Cung Thủ",
+            ActivityType.CAVALRY: "Huấn Luyện Kỵ Binh",
+            ActivityType.SIEGE: "Huấn Luyện Công Thành"
+        }
+        
+        activity_name = activity_names[self.current_activity]
         print(f"Hoạt động hiện tại: {activity_name}")
-        print(f"Tổng lần thực hiện: {self.get_current_entries()}")
-        print(f"Tổng chu kỳ đã hoàn thành: {self.total_cycles}")
+        print(f"Lần thực hiện hoạt động này: {self.get_current_entries()}")
+        print(f"Tổng chu kỳ đầy đủ đã hoàn thành: {self.total_cycles}")
 
 
 def execute_current_activity(tracker: ActivityTracker) -> bool:
     """Execute the current activity"""
-    return (execute_fog_scout_sequence() if tracker.current_activity == ActivityType.FOG_SCOUT 
-            else execute_barbarian_farm_sequence())
+    activity_map = {
+        ActivityType.FOG_SCOUT: execute_fog_scout_sequence,
+        ActivityType.BARBARIAN_FARM: execute_barbarian_farm_sequence,
+        ActivityType.INFANTRY: execute_infantry_sequence,
+        ActivityType.ARCHERS: execute_archers_sequence,
+        ActivityType.CAVALRY: execute_cavalry_sequence,
+        ActivityType.SIEGE: execute_siege_sequence
+    }
+    
+    return activity_map[tracker.current_activity]()
 
 
 def main():
     """Main execution of combo bot"""
-    print(f"RoK Combo Bot (Trinh Sát Sương Mù + Farm Barbarian) bắt đầu sau {Config.STARTUP_DELAY} giây...")
-    print("Cấu hình: Chuyển hoạt động sau mỗi chu kỳ")
+    print(f"RoK Combo Bot (Fog + Barbarian + Troop Training) bắt đầu sau {Config.STARTUP_DELAY} giây...")
+    print("Cấu hình: Fog → Barbarian → Infantry → Archers → Cavalry → Siege → Lặp lại")
     time.sleep(Config.STARTUP_DELAY)
     
     # Configure PyAutoGUI
