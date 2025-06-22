@@ -65,6 +65,7 @@ class AssetPaths:
     CONFIRM_FIND = f"{BASE_DIR}/confirm_find_button.png"
     ATTACK = f"{BASE_DIR}/attack_button.png"
     COMMANDER = f"{BASE_DIR}/commander_barbarian.png"
+    COMMANDER_BACK = f"{BASE_DIR}/commander_back.png"
     ADD_TROOP = f"{BASE_DIR}/icon_troop_available.png"
     SEND_TROOP = f"{BASE_DIR}/send_troop_available.png"
     TROOP_AVAILABLE = f"{BASE_DIR}/icon_troop_available.png"
@@ -77,7 +78,7 @@ class AssetPaths:
     TROOP_BACK = f"{BASE_DIR}/troop_back.png"
 
 # Stamina management constants
-MIN_STAMINA = 500
+MIN_STAMINA = 3000
 
 def check_troop_available() -> bool:
     """Check if troops are available"""
@@ -92,6 +93,14 @@ def check_commander_available() -> bool:
     """Check if commander is available"""
     try:
         location = pyautogui.locateOnScreen(AssetPaths.COMMANDER, confidence=0.6)
+        return location is not None
+    except Exception:
+        return False
+
+def check_commander_back_available() -> bool:
+    """Check if commander is available"""
+    try:
+        location = pyautogui.locateOnScreen(AssetPaths.COMMANDER_BACK, confidence=0.6)
         return location is not None
     except Exception:
         return False
@@ -186,29 +195,35 @@ def get_current_stamina() -> int:
         print(f"Error extracting stamina: {e}")
         return 0
 
-def handle_low_stamina() -> bool:
+def handle_low_stamina(combo_mode: bool = False) -> str:
     """Handle low stamina situation - try to recall troops"""
     print(f"Stamina is low, attempting to recall troops...")
     
     # Check if commander is available
-    if check_commander_available():
+    if check_commander_back_available():
         print("Commander found - clicking commander")
-        if try_click_button(AssetPaths.COMMANDER):
+        if try_click_button(AssetPaths.COMMANDER_BACK):
             time.sleep(1)
             # Try to click troop back button
             if try_click_button(AssetPaths.TROOP_BACK):
                 print("Troops recalled successfully")
-                return True
+                if combo_mode:
+                    print("Running in combo mode - returning STAMINA_LOW status")
+                    return "STAMINA_LOW"
+                else:
+                    print("Standalone mode - waiting 10 minutes for stamina recovery")
+                    time.sleep(600)  # Sleep 10 minutes (600 seconds)
+                    return "SUCCESS"
             else:
                 print("Could not find troop back button")
                 pyautogui.press('escape')  # Close commander window
-                return False
+                return "FAILED"
     else:
         print("No commander found - waiting 10 seconds for troops to return")
         time.sleep(10)
-        return False
+        return "FAILED"
 
-def execute_barbarian_farm_sequence() -> bool:
+def execute_barbarian_farm_sequence(combo_mode: bool = False) -> str:
     """Execute barbarian farm sequence with stamina management"""
     # Step 1: Setup - Press ESC to clear UI
     check_and_click_help_button()
@@ -225,7 +240,7 @@ def execute_barbarian_farm_sequence() -> bool:
         print(f"Stamina too low ({current_stamina} <= {MIN_STAMINA})", flush=True)
         pyautogui.press('escape')
         time.sleep(0.5)
-        return handle_low_stamina()
+        return handle_low_stamina(combo_mode)
     else:
         print(f"Stamina sufficient ({current_stamina} > {MIN_STAMINA}), proceeding with attack", flush=True)
         pyautogui.press('escape')
@@ -234,14 +249,14 @@ def execute_barbarian_farm_sequence() -> bool:
     # Step 3-5: Normal barbarian attack flow
     # Execute initial sequence
     if not try_click_button(AssetPaths.FIND_BAR):
-        return False
+        return "FAILED"
     
     # Critical buttons with ESC retry
     if not retry_with_esc(AssetPaths.CONFIRM_FIND):
-        return False
+        return "FAILED"
     
     if not retry_with_esc(AssetPaths.ATTACK):
-        return False
+        return "FAILED"
     
     # Smart flow based on commander availability
     if check_commander_available():
@@ -251,23 +266,23 @@ def execute_barbarian_farm_sequence() -> bool:
             print("No troops available, pressing ESC and ending session", flush=True)
             pyautogui.press('escape')
             time.sleep(Config.STEP_DELAY)
-            return False
+            return "FAILED"
         
         if not retry_with_esc(AssetPaths.ADD_TROOP):
-            return False
+            return "FAILED"
         if not retry_with_esc(AssetPaths.SEND_TROOP):
-            return False
+            return "FAILED"
     else:
         print("No commander found - using alternative flow", flush=True)
         # No commander - use alternative buttons
         if not retry_with_esc(AssetPaths.ADD_TROOP_ALT):
-            return False
+            return "FAILED"
         if not retry_with_esc(AssetPaths.SELECT_TROOP_ALT):
-            return False
+            return "FAILED"
         if not retry_with_esc(AssetPaths.SEND_TROOP_ALT):
-            return False
+            return "FAILED"
     
-    return True
+    return "SUCCESS"
 
 
 def main():
@@ -286,8 +301,11 @@ def main():
         while True:
             print("Starting barbarian farm cycle...", flush=True)
             
-            if execute_barbarian_farm_sequence():
+            result = execute_barbarian_farm_sequence(combo_mode=False)
+            if result == "SUCCESS":
                 print("Barbarian farm cycle completed successfully", flush=True)
+            elif result == "STAMINA_LOW":
+                print("Stamina low - troops recalled, waited 10 minutes", flush=True)
             else:
                 print("//==============================================================", flush=True)
                 print("Barbarian farm cycle failed, retrying...", flush=True)

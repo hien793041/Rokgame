@@ -42,6 +42,7 @@ class ActivityTracker:
         self.current_index = 0
         self.activity_counts = {activity: 0 for activity in self.activities}
         self.total_cycles = 0
+        self.barbarian_recovery_until = 0  # Timestamp when barbarian can resume
     
     @property
     def current_activity(self):
@@ -60,12 +61,38 @@ class ActivityTracker:
         """Always switch after each single cycle"""
         return True
     
+    def is_barbarian_recovering(self):
+        """Check if barbarian is in recovery period"""
+        return time.time() < self.barbarian_recovery_until
+    
+    def set_barbarian_recovery(self, minutes=10):
+        """Set barbarian recovery period"""
+        self.barbarian_recovery_until = time.time() + (minutes * 60)
+        print(f"Barbarian stamina low - recovery period set for {minutes} minutes", flush=True)
+    
+    def get_barbarian_recovery_remaining(self):
+        """Get remaining recovery time in minutes"""
+        remaining = self.barbarian_recovery_until - time.time()
+        return max(0, remaining / 60)
+    
     def switch_activity(self):
-        """Switch to next activity in sequence"""
-        self.current_index = (self.current_index + 1) % len(self.activities)
-        
-        if self.current_index == 0:  # Completed full cycle
-            self.total_cycles += 1
+        """Switch to next activity in sequence, considering barbarian recovery"""
+        # If barbarian is recovering, only run fog scouting
+        if self.is_barbarian_recovering():
+            if self.current_activity == ActivityType.BARBARIAN_FARM:
+                # Skip barbarian, go to fog
+                self.current_index = 0  # Fog scout index
+                remaining = self.get_barbarian_recovery_remaining()
+                print(f"Skipping barbarian (recovery: {remaining:.1f} min left) → Fog", flush=True)
+            else:
+                # Stay on fog scouting
+                print(f"Staying on fog scouting (barbarian recovery: {self.get_barbarian_recovery_remaining():.1f} min left)", flush=True)
+        else:
+            # Normal switching
+            self.current_index = (self.current_index + 1) % len(self.activities)
+            
+            if self.current_index == 0:  # Completed full cycle
+                self.total_cycles += 1
         
         activity_names = {
             ActivityType.FOG_SCOUT: "Trinh Sát Sương Mù",
@@ -88,14 +115,31 @@ class ActivityTracker:
         print(f"Tổng chu kỳ đầy đủ đã hoàn thành: {self.total_cycles}")
 
 
-def execute_current_activity(tracker: ActivityTracker) -> bool:
+def execute_current_activity(tracker: ActivityTracker) -> str:
     """Execute the current activity"""
-    activity_map = {
-        ActivityType.FOG_SCOUT: execute_fog_scout_sequence,
-        ActivityType.BARBARIAN_FARM: execute_barbarian_farm_sequence
-    }
+    current_activity = tracker.current_activity
     
-    return activity_map[tracker.current_activity]()
+    # Skip barbarian if in recovery period
+    if current_activity == ActivityType.BARBARIAN_FARM and tracker.is_barbarian_recovering():
+        remaining = tracker.get_barbarian_recovery_remaining()
+        print(f"Skipping barbarian activity - still recovering ({remaining:.1f} min left)", flush=True)
+        return "SKIPPED"
+    
+    if current_activity == ActivityType.FOG_SCOUT:
+        result = execute_fog_scout_sequence()
+        return "SUCCESS" if result else "FAILED"
+    
+    elif current_activity == ActivityType.BARBARIAN_FARM:
+        result = execute_barbarian_farm_sequence(combo_mode=True)
+        
+        # Handle barbarian-specific results
+        if result == "STAMINA_LOW":
+            tracker.set_barbarian_recovery(10)  # 10 minute recovery
+            return "STAMINA_LOW"
+        
+        return result
+    
+    return "FAILED"
 
 
 def main():
@@ -116,16 +160,23 @@ def main():
             tracker.print_status()
             
             # Execute current activity
-            success = execute_current_activity(tracker)
+            result = execute_current_activity(tracker)
             
             # Random delay after activity execution
             delay = Config.get_random_delay()
             print(f"Chờ {delay:.1f}s sau khi hoàn thành hoạt động...", flush=True)
             time.sleep(delay)
             
-            if success:
+            # Handle different result types
+            if result == "SUCCESS":
                 tracker.increment_current_entries()
                 print(f"Hoạt động hoàn thành thành công", flush=True)
+            elif result == "STAMINA_LOW":
+                tracker.increment_current_entries()
+                print(f"Barbarian stamina low - troops recalled, entering recovery mode", flush=True)
+            elif result == "SKIPPED":
+                # Don't increment for skipped activities
+                print(f"Hoạt động đã bỏ qua do đang phục hồi", flush=True)
             else:
                 print("Hoạt động thất bại, sẽ thử lại sau khi chuyển nếu cần", flush=True)
                 tracker.increment_current_entries()
