@@ -5,6 +5,7 @@ import os
 import cv2
 import numpy as np
 import pyautogui
+import random
 from typing import Optional, Tuple
 
 
@@ -35,10 +36,10 @@ def _find_button(image_path: str) -> Optional[Tuple[int, int]]:
         
         if max_val > Config.ACCURACY_THRESHOLD:
             h, w = template.shape
-            center_x = max_loc[0] + w // 2
-            center_y = max_loc[1] + h // 2
+            random_x = max_loc[0] + random.randint(0, w)
+            random_y = max_loc[1] + random.randint(0, h)
             print(f"Image found with accuracy: {max_val:.3f}")
-            return (center_x, center_y)
+            return (random_x, random_y)
     
     except Exception as e:
         print(f"Error in image recognition: {e}", flush=True)

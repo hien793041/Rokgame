@@ -1,5 +1,5 @@
 """
-Combo Bot - Fog Scout + Troop Training (Infantry, Archers, Cavalry, Siege)
+Combo Bot - Fog Scout + Barbarian Farming (2-activity cycle)
 """
 import io
 import sys
@@ -7,31 +7,29 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 
 import pyautogui
 import time
+import random
 from enum import Enum
 from bot_utils import ensure_assets_directory
-from sequences import (
-    execute_fog_scout_sequence,
-    execute_infantry_sequence,
-    execute_archers_sequence,
-    execute_cavalry_sequence,
-    execute_siege_sequence
-)
+from sequences import execute_fog_scout_sequence, execute_barbarian_farm_sequence
 
 
 class ActivityType(Enum):
     """Types of activities the bot can perform"""
     FOG_SCOUT = "fog_scout"
-    INFANTRY = "infantry"
-    ARCHERS = "archers"
-    CAVALRY = "cavalry"
-    SIEGE = "siege"
+    BARBARIAN_FARM = "barbarian_farm"
 
 
 class Config:
     """Configuration for combo bot"""
     STARTUP_DELAY = 2
     SCREENSHOT_PAUSE = 0.3
-    ACTIVITY_SWITCH_DELAY = 1.3
+    MIN_DELAY = 1.3
+    MAX_DELAY = 1.5
+    
+    @staticmethod
+    def get_random_delay():
+        """Get random delay between 1.3-1.5 seconds"""
+        return random.uniform(Config.MIN_DELAY, Config.MAX_DELAY)
 
 
 class ActivityTracker:
@@ -39,11 +37,7 @@ class ActivityTracker:
     def __init__(self):
         self.activities = [
             ActivityType.FOG_SCOUT,
-            ActivityType.FOG_SCOUT,
-            ActivityType.INFANTRY,
-            ActivityType.ARCHERS,
-            ActivityType.CAVALRY,
-            ActivityType.SIEGE
+            ActivityType.BARBARIAN_FARM
         ]
         self.current_index = 0
         self.activity_counts = {activity: 0 for activity in self.activities}
@@ -75,10 +69,7 @@ class ActivityTracker:
         
         activity_names = {
             ActivityType.FOG_SCOUT: "Trinh Sát Sương Mù",
-            ActivityType.INFANTRY: "Huấn Luyện Bộ Binh",
-            ActivityType.ARCHERS: "Huấn Luyện Cung Thủ",
-            ActivityType.CAVALRY: "Huấn Luyện Kỵ Binh",
-            ActivityType.SIEGE: "Huấn Luyện Công Thành"
+            ActivityType.BARBARIAN_FARM: "Farm Barbarian"
         }
         
         activity_name = activity_names[self.current_activity]
@@ -88,10 +79,7 @@ class ActivityTracker:
         """Print current status"""
         activity_names = {
             ActivityType.FOG_SCOUT: "Trinh Sát Sương Mù",
-            ActivityType.INFANTRY: "Huấn Luyện Bộ Binh",
-            ActivityType.ARCHERS: "Huấn Luyện Cung Thủ",
-            ActivityType.CAVALRY: "Huấn Luyện Kỵ Binh",
-            ActivityType.SIEGE: "Huấn Luyện Công Thành"
+            ActivityType.BARBARIAN_FARM: "Farm Barbarian"
         }
         
         activity_name = activity_names[self.current_activity]
@@ -104,10 +92,7 @@ def execute_current_activity(tracker: ActivityTracker) -> bool:
     """Execute the current activity"""
     activity_map = {
         ActivityType.FOG_SCOUT: execute_fog_scout_sequence,
-        ActivityType.INFANTRY: execute_infantry_sequence,
-        ActivityType.ARCHERS: execute_archers_sequence,
-        ActivityType.CAVALRY: execute_cavalry_sequence,
-        ActivityType.SIEGE: execute_siege_sequence
+        ActivityType.BARBARIAN_FARM: execute_barbarian_farm_sequence
     }
     
     return activity_map[tracker.current_activity]()
@@ -115,8 +100,8 @@ def execute_current_activity(tracker: ActivityTracker) -> bool:
 
 def main():
     """Main execution of combo bot"""
-    print(f"RoK Combo Bot (Fog Scout + Troop Training) bắt đầu sau {Config.STARTUP_DELAY} giây...")
-    print("Cấu hình: Fog Scout → Infantry → Archers → Cavalry → Siege → Lặp lại")
+    print(f"RoK Combo Bot (Fog + Barbarian) bắt đầu sau {Config.STARTUP_DELAY} giây...")
+    print("Cấu hình: Fog Scout → Barbarian Farm → Lặp lại")
     time.sleep(Config.STARTUP_DELAY)
     
     # Configure PyAutoGUI
@@ -127,11 +112,16 @@ def main():
     
     try:
         while True:
-            print(f"\n--- Hoạt Động {tracker.get_current_entries() + 1} ---")
+            print(f"\n--- Chu Kỳ {tracker.get_current_entries() + 1} ---")
             tracker.print_status()
             
             # Execute current activity
             success = execute_current_activity(tracker)
+            
+            # Random delay after activity execution
+            delay = Config.get_random_delay()
+            print(f"Chờ {delay:.1f}s sau khi hoàn thành hoạt động...", flush=True)
+            time.sleep(delay)
             
             if success:
                 tracker.increment_current_entries()
@@ -140,14 +130,18 @@ def main():
                 print("Hoạt động thất bại, sẽ thử lại sau khi chuyển nếu cần", flush=True)
                 tracker.increment_current_entries()
             
-            # Switch to next activity after each cycle
+            # Switch activity after each cycle
             if tracker.should_switch_activity():
-                print("\nChuyển sang hoạt động tiếp theo", flush=True)
+                print("\nChuyển sang hoạt động khác sau 1 chu kỳ", flush=True)
                 tracker.switch_activity()
                 
-                # Wait before starting next activity
-                print(f"Chờ {Config.ACTIVITY_SWITCH_DELAY}s trước khi bắt đầu hoạt động tiếp theo...", flush=True)
-                time.sleep(Config.ACTIVITY_SWITCH_DELAY)
+                # Random delay before starting next activity
+                switch_delay = Config.get_random_delay()
+                print(f"Chờ {switch_delay:.1f}s trước khi bắt đầu hoạt động tiếp theo...", flush=True)
+                time.sleep(switch_delay)
+            else:
+                delay = Config.get_random_delay()
+                time.sleep(delay)
             
     except KeyboardInterrupt:
         print("\nCombo bot đã dừng bởi người dùng", flush=True)

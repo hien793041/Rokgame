@@ -1,12 +1,40 @@
 """
-Barbarian Farm Sequence - Clean and optimized
+Barbarian Farm Sequence - Clean and optimized with stamina management
 """
 import pyautogui
 import time
 import sys
 import os
+import cv2
+import numpy as np
+import re
+from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from bot_utils import ensure_assets_directory
+
+# Stamina detection imports
+try:
+    import pytesseract
+    from PIL import Image
+    
+    # Try to set Tesseract path for Windows
+    possible_paths = [
+        r'C:\Program Files\Tesseract-OCR\tesseract.exe',
+        r'C:\Program Files (x86)\Tesseract-OCR\tesseract.exe',
+        r'C:\Users\%USERNAME%\AppData\Local\Tesseract-OCR\tesseract.exe',
+        '/usr/bin/tesseract',
+        '/usr/local/bin/tesseract'
+    ]
+    
+    for path in possible_paths:
+        expanded_path = os.path.expanduser(os.path.expandvars(path))
+        if os.path.exists(expanded_path):
+            pytesseract.pytesseract.tesseract_cmd = expanded_path
+            break
+    
+    TESSERACT_AVAILABLE = True
+except ImportError:
+    TESSERACT_AVAILABLE = False
 
 try:
     from .shared_utils import (
@@ -44,6 +72,12 @@ class AssetPaths:
     ADD_TROOP_ALT = f"{BASE_DIR}/add_troop_button.png"
     SEND_TROOP_ALT = f"{BASE_DIR}/send_troop_button.png"
     SELECT_TROOP_ALT = f"{BASE_DIR}/select_troop_button.png"
+    # Stamina and commander management
+    STAMINA_CHECK = f"{BASE_DIR}/stamina_check.png"
+    TROOP_BACK = f"{BASE_DIR}/troop_back.png"
+
+# Stamina management constants
+MIN_STAMINA = 500
 
 def check_troop_available() -> bool:
     """Check if troops are available"""
@@ -62,12 +96,142 @@ def check_commander_available() -> bool:
     except Exception:
         return False
 
+def find_stamina_check_position():
+    """Find stamina_check.png position on screen"""
+    try:
+        stamina_check_path = AssetPaths.STAMINA_CHECK
+        
+        # Take screenshot
+        screenshot = np.array(pyautogui.screenshot())
+        screenshot = cv2.cvtColor(screenshot, cv2.COLOR_RGB2BGR)
+        
+        # Load template image
+        template = cv2.imread(stamina_check_path)
+        if template is None:
+            print(f"Error: Could not load {stamina_check_path}")
+            return None
+        
+        # Convert to grayscale for template matching
+        screenshot_gray = cv2.cvtColor(screenshot, cv2.COLOR_BGR2GRAY)
+        template_gray = cv2.cvtColor(template, cv2.COLOR_BGR2GRAY)
+        
+        # Perform template matching
+        result = cv2.matchTemplate(screenshot_gray, template_gray, cv2.TM_CCOEFF_NORMED)
+        _, max_val, _, max_loc = cv2.minMaxLoc(result)
+        
+        # Check if match is good enough
+        if max_val > 0.7:
+            h, w = template_gray.shape
+            print(f"Stamina check found with confidence: {max_val:.3f}")
+            return (max_loc[0], max_loc[1], w, h)  # Return top-left corner and dimensions
+        else:
+            print(f"Stamina check not found (confidence: {max_val:.3f})")
+            return None
+            
+    except Exception as e:
+        print(f"Error finding stamina check: {e}")
+        return None
+
+def get_current_stamina() -> int:
+    """Extract current stamina value"""
+    if not TESSERACT_AVAILABLE:
+        print("Tesseract not available for stamina detection")
+        return 0
+    
+    try:
+        # Find stamina check position first
+        stamina_pos = find_stamina_check_position()
+        if not stamina_pos:
+            print("Could not find stamina check position")
+            return 0
+        
+        stamina_x, stamina_y, stamina_w, stamina_h = stamina_pos
+        
+        # Take screenshot
+        screenshot = pyautogui.screenshot()
+        
+        # Crop the stamina check area itself
+        cropped = screenshot.crop((stamina_x, stamina_y, stamina_x + stamina_w, stamina_y + stamina_h))
+        
+        # Try Tesseract OCR with PSM 6 and 7 (known to work best)
+        ocr_configs = ['--psm 6', '--psm 7']
+        
+        for config in ocr_configs:
+            try:
+                text = pytesseract.image_to_string(cropped, config=config)
+                text = text.strip()
+                
+                if text and ('/' in text) and any(c.isdigit() for c in text):
+                    # Look for stamina patterns
+                    patterns = [
+                        r'(\d+)/1\.500',         # 352/1.500 (period separator)
+                        r'(\d+)/1,500',          # 352/1,500 (comma separator)  
+                        r'(\d+)/1500',           # 352/1500 (no separator)
+                        r'(\d+)/\d+',            # Any XXX/YYY pattern
+                    ]
+                    
+                    for pattern in patterns:
+                        matches = re.findall(pattern, text)
+                        if matches:
+                            stamina_value = int(matches[0])
+                            print(f"Current stamina: {stamina_value}")
+                            return stamina_value
+            except Exception as e:
+                continue
+        
+        print("Could not extract stamina value")
+        return 0
+        
+    except Exception as e:
+        print(f"Error extracting stamina: {e}")
+        return 0
+
+def handle_low_stamina() -> bool:
+    """Handle low stamina situation - try to recall troops"""
+    print(f"Stamina is low, attempting to recall troops...")
+    
+    # Check if commander is available
+    if check_commander_available():
+        print("Commander found - clicking commander")
+        if try_click_button(AssetPaths.COMMANDER):
+            time.sleep(1)
+            # Try to click troop back button
+            if try_click_button(AssetPaths.TROOP_BACK):
+                print("Troops recalled successfully")
+                return True
+            else:
+                print("Could not find troop back button")
+                pyautogui.press('escape')  # Close commander window
+                return False
+    else:
+        print("No commander found - waiting 10 seconds for troops to return")
+        time.sleep(10)
+        return False
+
 def execute_barbarian_farm_sequence() -> bool:
-    """Execute barbarian farm sequence"""
+    """Execute barbarian farm sequence with stamina management"""
+    # Step 1: Setup - Press ESC to clear UI
     check_and_click_help_button()
     check_and_click_close_esc()
     check_and_click_go_outside()
+    print("Open setting by ESC", flush=True)
+    pyautogui.press('escape')
+    time.sleep(0.5)
+    # Step 2: Check stamina
+    current_stamina = get_current_stamina()
+    if current_stamina == 0:
+        print("Could not detect stamina, proceeding anyway", flush=True)
+    elif current_stamina <= MIN_STAMINA:
+        print(f"Stamina too low ({current_stamina} <= {MIN_STAMINA})", flush=True)
+        pyautogui.press('escape')
+        time.sleep(0.5)
+        return handle_low_stamina()
+    else:
+        print(f"Stamina sufficient ({current_stamina} > {MIN_STAMINA}), proceeding with attack", flush=True)
+        pyautogui.press('escape')
+        time.sleep(0.5)
     
+    # Step 3-5: Normal barbarian attack flow
     # Execute initial sequence
     if not try_click_button(AssetPaths.FIND_BAR):
         return False
@@ -125,6 +289,7 @@ def main():
             if execute_barbarian_farm_sequence():
                 print("Barbarian farm cycle completed successfully", flush=True)
             else:
+                print("//==============================================================", flush=True)
                 print("Barbarian farm cycle failed, retrying...", flush=True)
             
             time.sleep(Config.STEP_DELAY)
