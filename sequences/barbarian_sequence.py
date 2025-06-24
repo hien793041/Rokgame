@@ -265,7 +265,7 @@ def execute_barbarian_farm_sequence(combo_mode: bool = False) -> str:
         if not check_troop_available():
             print("No troops available, pressing ESC and ending session", flush=True)
             pyautogui.press('escape')
-            time.sleep(Config.STEP_DELAY)
+            time.sleep(Config.STEP_DELAY())
             return "FAILED"
         
         if not retry_with_esc(AssetPaths.ADD_TROOP):
@@ -291,8 +291,8 @@ def main():
     import sys
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     
-    print(f"RoK Barbarian Farm Bot starting in {Config.STEP_DELAY} seconds...")
-    time.sleep(Config.STEP_DELAY)
+    print(f"RoK Barbarian Farm Bot starting in {Config.STEP_DELAY()} seconds...")
+    time.sleep(Config.STEP_DELAY())
     
     pyautogui.FAILSAFE = True
     pyautogui.PAUSE = 0.3
@@ -310,7 +310,7 @@ def main():
                 print("//==============================================================", flush=True)
                 print("Barbarian farm cycle failed, retrying...", flush=True)
             
-            time.sleep(Config.STEP_DELAY)
+            time.sleep(Config.STEP_DELAY())
             
     except KeyboardInterrupt:
         print("Barbarian farm bot stopped by user", flush=True)

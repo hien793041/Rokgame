@@ -5,6 +5,7 @@ import pyautogui
 import time
 import sys
 import os
+import random
 
 # Add parent directory to path when running as standalone
 if __name__ == '__main__' or '.' not in __name__:
@@ -16,9 +17,9 @@ from bot_utils import click_button
 class Config:
     """Configuration constants"""
     MAX_RETRIES = 2
-    STEP_DELAY = 1.3
-    BUTTON_DELAY = 1.3
-    RETRY_DELAY = 1.5
+    STEP_DELAY = lambda: random.uniform(1.5, 2.5)
+    BUTTON_DELAY = lambda: random.uniform(1.5, 2.5)
+    RETRY_DELAY = lambda: random.uniform(1.5, 2.5)
 
 
 class SharedAssetPaths:
@@ -33,7 +34,7 @@ class SharedAssetPaths:
 def try_click_button(button_path: str) -> bool:
     """Try to click button once"""
     if click_button(button_path):
-        time.sleep(Config.BUTTON_DELAY)
+        time.sleep(Config.BUTTON_DELAY())
         return True
     return False
 
@@ -47,7 +48,7 @@ def check_and_click_go_home() -> bool:
     """Check and click go home button if found"""
     try:
         if try_click_button_silent(SharedAssetPaths.GO_HOME):
-            time.sleep(Config.STEP_DELAY)
+            time.sleep(Config.STEP_DELAY())
             return True
         return False
     except Exception:
@@ -58,7 +59,7 @@ def check_and_click_go_outside() -> bool:
     """Check and click go outside button if found"""
     try:
         if try_click_button_silent(SharedAssetPaths.GO_OUTSIDE):
-            time.sleep(Config.STEP_DELAY)
+            time.sleep(Config.STEP_DELAY())
             return True
         return False
     except Exception:
@@ -69,7 +70,7 @@ def check_and_click_close_esc() -> bool:
     """Check and click close ESC button if found"""
     try:
         if try_click_button_silent(SharedAssetPaths.CLOSE_ESC):
-            time.sleep(Config.STEP_DELAY)
+            time.sleep(Config.STEP_DELAY())
             return True
         return False
     except Exception:
@@ -80,7 +81,7 @@ def check_and_click_help_button() -> bool:
     """Check and click help button if found"""
     try:
         if try_click_button_silent(SharedAssetPaths.HELP_BUTTON):
-            time.sleep(Config.STEP_DELAY)
+            time.sleep(Config.STEP_DELAY())
             return True
         return False
     except Exception:
@@ -88,11 +89,11 @@ def check_and_click_help_button() -> bool:
 
 
 
-def retry_with_esc(button_path: str, max_retries: int = 2) -> bool:
+def retry_with_esc(button_path: str, max_retries: int = 1) -> bool:
     """Retry button click with ESC press on failure"""
     for retry_count in range(max_retries):
         if try_click_button(button_path):
             return True
         pyautogui.press('escape')
-        time.sleep(Config.RETRY_DELAY)
+        time.sleep(Config.RETRY_DELAY())
     return False

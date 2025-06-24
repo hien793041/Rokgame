@@ -16,6 +16,7 @@ from sequences import (
     execute_cavalry_sequence,
     execute_siege_sequence
 )
+from sequences.resources_requence import check_joan_rss, execute_resource_gathering
 
 
 class ActivityType(Enum):
@@ -25,13 +26,14 @@ class ActivityType(Enum):
     ARCHERS = "archers"
     CAVALRY = "cavalry"
     SIEGE = "siege"
+    RESOURCES = "resources"
 
 
 class Config:
     """Configuration for combo bot"""
     STARTUP_DELAY = 2
     SCREENSHOT_PAUSE = 0.3
-    ACTIVITY_SWITCH_DELAY = 1.3
+    ACTIVITY_SWITCH_DELAY = 1.5
 
 
 class ActivityTracker:
@@ -39,10 +41,15 @@ class ActivityTracker:
     def __init__(self):
         self.activities = [
             ActivityType.FOG_SCOUT,
-            ActivityType.FOG_SCOUT,
             ActivityType.INFANTRY,
+            ActivityType.FOG_SCOUT,
+            ActivityType.RESOURCES,
             ActivityType.ARCHERS,
+            ActivityType.FOG_SCOUT,
+            ActivityType.RESOURCES,
             ActivityType.CAVALRY,
+            ActivityType.FOG_SCOUT,
+            ActivityType.RESOURCES,
             ActivityType.SIEGE
         ]
         self.current_index = 0
@@ -78,7 +85,8 @@ class ActivityTracker:
             ActivityType.INFANTRY: "Huấn Luyện Bộ Binh",
             ActivityType.ARCHERS: "Huấn Luyện Cung Thủ",
             ActivityType.CAVALRY: "Huấn Luyện Kỵ Binh",
-            ActivityType.SIEGE: "Huấn Luyện Công Thành"
+            ActivityType.SIEGE: "Huấn Luyện Công Thành",
+            ActivityType.RESOURCES: "Thu Thập Tài Nguyên"
         }
         
         activity_name = activity_names[self.current_activity]
@@ -91,7 +99,8 @@ class ActivityTracker:
             ActivityType.INFANTRY: "Huấn Luyện Bộ Binh",
             ActivityType.ARCHERS: "Huấn Luyện Cung Thủ",
             ActivityType.CAVALRY: "Huấn Luyện Kỵ Binh",
-            ActivityType.SIEGE: "Huấn Luyện Công Thành"
+            ActivityType.SIEGE: "Huấn Luyện Công Thành",
+            ActivityType.RESOURCES: "Thu Thập Tài Nguyên"
         }
         
         activity_name = activity_names[self.current_activity]
@@ -102,6 +111,15 @@ class ActivityTracker:
 
 def execute_current_activity(tracker: ActivityTracker) -> bool:
     """Execute the current activity"""
+    if tracker.current_activity == ActivityType.RESOURCES:
+        # Resources activity has special logic
+        if check_joan_rss():
+            print("Joan RSS available - no gathering needed", flush=True)
+            return True
+        else:
+            print("Starting resource gathering sequence...", flush=True)
+            return execute_resource_gathering()
+    
     activity_map = {
         ActivityType.FOG_SCOUT: execute_fog_scout_sequence,
         ActivityType.INFANTRY: execute_infantry_sequence,
@@ -116,7 +134,7 @@ def execute_current_activity(tracker: ActivityTracker) -> bool:
 def main():
     """Main execution of combo bot"""
     print(f"RoK Combo Bot (Fog Scout + Troop Training) bắt đầu sau {Config.STARTUP_DELAY} giây...")
-    print("Cấu hình: Fog Scout → Infantry → Archers → Cavalry → Siege → Lặp lại")
+    print("Cấu hình: Fog Scout → Infantry → Archers → Cavalry → Siege → Resources → Lặp lại")
     time.sleep(Config.STARTUP_DELAY)
     
     # Configure PyAutoGUI

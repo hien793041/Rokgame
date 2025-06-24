@@ -70,7 +70,7 @@ def execute_cavalry_sequence() -> bool:
         else:
             print("Confirm train not found - pressing ESC and ending session", flush=True)
             pyautogui.press('escape')
-            time.sleep(Config.STEP_DELAY)
+            time.sleep(Config.STEP_DELAY())
             return False
         
         return True
@@ -86,8 +86,8 @@ def main():
     import sys
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     
-    print(f"RoK Cavalry Training Bot starting in {Config.STEP_DELAY} seconds...")
-    time.sleep(Config.STEP_DELAY)
+    print(f"RoK Cavalry Training Bot starting in {Config.STEP_DELAY()} seconds...")
+    time.sleep(Config.STEP_DELAY())
     
     pyautogui.FAILSAFE = True
     pyautogui.PAUSE = 0.3
@@ -101,7 +101,7 @@ def main():
             else:
                 print("Cavalry training cycle failed, retrying...", flush=True)
             
-            time.sleep(Config.STEP_DELAY)
+            time.sleep(Config.STEP_DELAY())
             
     except KeyboardInterrupt:
         print("Cavalry training bot stopped by user", flush=True)

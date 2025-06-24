@@ -34,6 +34,7 @@ class AssetPaths:
     SCOUT_CAMP = f"{BASE_DIR}/scout_camp.png"
     EXPLORE = f"{BASE_DIR}/explore_button.png"
     CONFIRM = f"{BASE_DIR}/confirm_button.png"
+    SECOND_CONFIRM = f"{BASE_DIR}/second_confirm_button.png"
     SEND = f"{BASE_DIR}/send_button.png"
 
 
@@ -47,7 +48,7 @@ def execute_fog_scout_sequence() -> bool:
     if not try_click_button(AssetPaths.SCOUT_CAMP):
         return False
     
-    time.sleep(Config.STEP_DELAY)
+    # time.sleep(Config.STEP_DELAY())
     
     if not try_click_button(AssetPaths.EXPLORE):
         return False
@@ -56,7 +57,7 @@ def execute_fog_scout_sequence() -> bool:
     if not retry_with_esc(AssetPaths.CONFIRM):
         return False
     
-    if not retry_with_esc(AssetPaths.CONFIRM):
+    if not retry_with_esc(AssetPaths.SECOND_CONFIRM):
         return False
     
     if not retry_with_esc(AssetPaths.SEND):
@@ -80,10 +81,12 @@ def main():
             
             if execute_fog_scout_sequence():
                 print("Fog scout cycle completed successfully", flush=True)
+                print("//=======================================", flush=True)
             else:
                 print("Fog scout cycle failed, retrying...", flush=True)
+                print("//=======================================", flush=True)
             
-            time.sleep(Config.STEP_DELAY)
+            time.sleep(Config.STEP_DELAY())
             
     except KeyboardInterrupt:
         print("Fog scout bot stopped by user", flush=True)
