@@ -100,7 +100,10 @@ class ActivityTracker:
         }
         
         activity_name = activity_names[self.current_activity]
-        print(f"Đã chuyển sang {activity_name}", flush=True)
+        print(f"\n★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★", flush=True)
+        print(f"★                   CHUYỂN HOẠT ĐỘNG                    ★", flush=True) 
+        print(f"★              Đã chuyển sang {activity_name:<18} ★", flush=True)
+        print(f"★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★", flush=True)
     
     def print_status(self):
         """Print current status"""
@@ -110,9 +113,11 @@ class ActivityTracker:
         }
         
         activity_name = activity_names[self.current_activity]
-        print(f"Hoạt động hiện tại: {activity_name}")
-        print(f"Lần thực hiện hoạt động này: {self.get_current_entries()}")
-        print(f"Tổng chu kỳ đầy đủ đã hoàn thành: {self.total_cycles}")
+        print(f"┌─────────────────────────────────────────────────────┐", flush=True)
+        print(f"│  🎯 Hoạt động hiện tại: {activity_name:<20} │", flush=True)
+        print(f"│  🔄 Lần thực hiện: {self.get_current_entries():<25} │", flush=True)
+        print(f"│  ✅ Tổng chu kỳ hoàn thành: {self.total_cycles:<18} │", flush=True)
+        print(f"└─────────────────────────────────────────────────────┘", flush=True)
 
 
 def execute_current_activity(tracker: ActivityTracker) -> str:
@@ -156,7 +161,9 @@ def main():
     
     try:
         while True:
-            print(f"\n--- Chu Kỳ {tracker.get_current_entries() + 1} ---")
+            print(f"\n🔥━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🔥", flush=True)
+            print(f"🔥                           CHU KỲ {tracker.get_current_entries() + 1:<3}                            🔥", flush=True)
+            print(f"🔥━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🔥", flush=True)
             tracker.print_status()
             
             # Execute current activity
@@ -170,25 +177,25 @@ def main():
             # Handle different result types
             if result == "SUCCESS":
                 tracker.increment_current_entries()
-                print(f"Hoạt động hoàn thành thành công", flush=True)
+                print(f"✅ Hoạt động hoàn thành thành công", flush=True)
             elif result == "STAMINA_LOW":
                 tracker.increment_current_entries()
-                print(f"Barbarian stamina low - troops recalled, entering recovery mode", flush=True)
+                print(f"⚠️  Barbarian stamina low - troops recalled, entering recovery mode", flush=True)
             elif result == "SKIPPED":
                 # Don't increment for skipped activities
-                print(f"Hoạt động đã bỏ qua do đang phục hồi", flush=True)
+                print(f"⏭️  Hoạt động đã bỏ qua do đang phục hồi", flush=True)
             else:
-                print("Hoạt động thất bại, sẽ thử lại sau khi chuyển nếu cần", flush=True)
+                print("❌ Hoạt động thất bại, sẽ thử lại sau khi chuyển nếu cần", flush=True)
                 tracker.increment_current_entries()
             
             # Switch activity after each cycle
             if tracker.should_switch_activity():
-                print("\nChuyển sang hoạt động khác sau 1 chu kỳ", flush=True)
+                print(f"\n⚡⚡⚡ ĐANG CHUYỂN ĐỔII HOẠT ĐỘNG SAU 1 CHU KỲ ⚡⚡⚡", flush=True)
                 tracker.switch_activity()
                 
                 # Random delay before starting next activity
                 switch_delay = Config.get_random_delay()
-                print(f"Chờ {switch_delay:.1f}s trước khi bắt đầu hoạt động tiếp theo...", flush=True)
+                print(f"⏰ Chờ {switch_delay:.1f}s trước khi bắt đầu hoạt động tiếp theo...", flush=True)
                 time.sleep(switch_delay)
             else:
                 delay = Config.get_random_delay()

@@ -298,18 +298,22 @@ def main():
     pyautogui.PAUSE = 0.3
     
     try:
+        cycle_count = 1
         while True:
-            print("Starting barbarian farm cycle...", flush=True)
+            print(f"\n🔥━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🔥", flush=True)
+            print(f"🔥                      BARBARIAN FARM CHU KỲ {cycle_count:<3}                   🔥", flush=True)
+            print(f"🔥━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🔥", flush=True)
             
             result = execute_barbarian_farm_sequence(combo_mode=False)
             if result == "SUCCESS":
-                print("Barbarian farm cycle completed successfully", flush=True)
+                print("✅ Barbarian farm cycle completed successfully", flush=True)
             elif result == "STAMINA_LOW":
-                print("Stamina low - troops recalled, waited 10 minutes", flush=True)
+                print("⚠️  Stamina low - troops recalled, waited 10 minutes", flush=True)
             else:
-                print("//==============================================================", flush=True)
-                print("Barbarian farm cycle failed, retrying...", flush=True)
+                print("❌ Barbarian farm cycle failed, retrying...", flush=True)
             
+            print("//==============================================================", flush=True)
+            cycle_count += 1
             time.sleep(Config.STEP_DELAY())
             
     except KeyboardInterrupt:

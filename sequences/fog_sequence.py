@@ -36,7 +36,23 @@ class AssetPaths:
     CONFIRM = f"{BASE_DIR}/confirm_button.png"
     SECOND_CONFIRM = f"{BASE_DIR}/second_confirm_button.png"
     SEND = f"{BASE_DIR}/send_button.png"
+    SCOUTER_CHECK = f"{BASE_DIR}/scouter_check.png"
 
+
+
+def check_scouter_check() -> bool:
+    """Check if scouter check is found on screen"""
+    try:
+        location = pyautogui.locateOnScreen(AssetPaths.SCOUTER_CHECK, confidence=0.7)
+        if location:
+            print("Scouter check found - ending session", flush=True)
+            return True
+        return False
+    except pyautogui.ImageNotFoundException:
+        return False
+    except Exception as e:
+        print(f"Error checking scouter check: {e}", flush=True)
+        return False
 
 
 def execute_fog_scout_sequence() -> bool:
@@ -45,6 +61,9 @@ def execute_fog_scout_sequence() -> bool:
     check_and_click_close_esc()
     check_and_click_go_home()
     
+    # Check scouter check - if not found, end session
+    if not check_scouter_check():
+        return False
     if not try_click_button(AssetPaths.SCOUT_CAMP):
         return False
     

@@ -47,12 +47,98 @@ def _find_button(image_path: str) -> Optional[Tuple[int, int]]:
     return None
 
 
+def move_mouse_zigzag(target_x: int, target_y: int, duration: float = 0.5):
+    """Move mouse in natural human-like pattern to target position"""
+    import math
+    import time
+    
+    current_x, current_y = pyautogui.position()
+    distance = math.sqrt((target_x - current_x)**2 + (target_y - current_y)**2)
+    
+    # Don't add movement complexity for very short distances
+    if distance < 50:
+        pyautogui.moveTo(target_x, target_y, duration=duration, tween=pyautogui.easeInOutQuad)
+        return
+    
+    # Human-like characteristics
+    num_points = random.randint(2, 6)  # More variation in movement patterns
+    overshoot_chance = 0.3  # Sometimes humans overshoot slightly
+    hesitation_chance = 0.2  # Sometimes humans hesitate mid-movement
+    
+    waypoints = [(current_x, current_y)]
+    
+    for i in range(1, num_points):
+        progress = i / num_points
+        
+        # Add natural curve with some randomness
+        curve_factor = random.uniform(0.1, 0.3)
+        perpendicular_x = -(target_y - current_y) / distance * curve_factor * distance
+        perpendicular_y = (target_x - current_x) / distance * curve_factor * distance
+        
+        # Base position with natural curve
+        x = current_x + (target_x - current_x) * progress
+        y = current_y + (target_y - current_y) * progress
+        
+        # Add curve offset (humans don't move in straight lines)
+        curve_strength = math.sin(progress * math.pi) * random.uniform(0.7, 1.3)
+        x += perpendicular_x * curve_strength
+        y += perpendicular_y * curve_strength
+        
+        # Add small random imperfections
+        x += random.uniform(-5, 5)
+        y += random.uniform(-5, 5)
+        
+        waypoints.append((int(x), int(y)))
+    
+    # Final target (with possible small overshoot)
+    final_x, final_y = target_x, target_y
+    if random.random() < overshoot_chance:
+        overshoot_x = random.uniform(-3, 3)
+        overshoot_y = random.uniform(-3, 3)
+        waypoints.append((target_x + overshoot_x, target_y + overshoot_y))
+        waypoints.append((target_x, target_y))  # Correct back
+    else:
+        waypoints.append((target_x, target_y))
+    
+    # Move through waypoints with variable timing
+    total_time = 0
+    for i in range(1, len(waypoints)):
+        segment_progress = i / (len(waypoints) - 1)
+        
+        # Variable segment duration (humans speed up/slow down naturally)
+        if i == 1:
+            # Start slower
+            segment_duration = duration * 0.4
+        elif i == len(waypoints) - 1:
+            # End slower
+            segment_duration = duration * 0.3
+        else:
+            # Middle segments faster
+            segment_duration = duration * 0.3 / max(1, len(waypoints) - 2)
+        
+        x, y = waypoints[i]
+        
+        # Choose random easing function for variety
+        tween_funcs = [pyautogui.easeInOutQuad, pyautogui.easeOutQuad, pyautogui.easeInQuad]
+        tween = random.choice(tween_funcs)
+        
+        pyautogui.moveTo(x, y, duration=segment_duration, tween=tween)
+        
+        # Random micro-pauses (hesitation)
+        if random.random() < hesitation_chance and i < len(waypoints) - 1:
+            time.sleep(random.uniform(0.05, 0.15))
+        
+        total_time += segment_duration
+
+
 def click_button(image_path: str) -> bool:
     """Click button if found"""
     position = _find_button(image_path)
     if position:
         print(f"Clicking {os.path.basename(image_path)} at {position}", flush=True)
-        pyautogui.click(*position)
+        duration = random.uniform(0.08, 0.20)  # Much faster: 0.08-0.20s
+        move_mouse_zigzag(*position, duration)
+        pyautogui.click()
         return True
     print(f"Button not found: {os.path.basename(image_path)}", flush=True)
     return False

@@ -17,6 +17,7 @@ from sequences import (
     execute_siege_sequence
 )
 from sequences.resources_requence import check_joan_rss, execute_resource_gathering
+from sequences.reconnect_sequence import execute_reconnect_sequence
 
 
 class ActivityType(Enum):
@@ -90,7 +91,10 @@ class ActivityTracker:
         }
         
         activity_name = activity_names[self.current_activity]
-        print(f"Đã chuyển sang {activity_name}", flush=True)
+        print(f"\n★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★", flush=True)
+        print(f"★                   CHUYỂN HOẠT ĐỘNG                    ★", flush=True) 
+        print(f"★              Đã chuyển sang {activity_name:<18} ★", flush=True)
+        print(f"★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★★", flush=True)
     
     def print_status(self):
         """Print current status"""
@@ -104,9 +108,11 @@ class ActivityTracker:
         }
         
         activity_name = activity_names[self.current_activity]
-        print(f"Hoạt động hiện tại: {activity_name}")
-        print(f"Lần thực hiện hoạt động này: {self.get_current_entries()}")
-        print(f"Tổng chu kỳ đầy đủ đã hoàn thành: {self.total_cycles}")
+        print(f"┌─────────────────────────────────────────────────────┐", flush=True)
+        print(f"│  🎯 Hoạt động hiện tại: {activity_name:<20} │", flush=True)
+        print(f"│  🔄 Lần thực hiện: {self.get_current_entries():<25} │", flush=True)
+        print(f"│  ✅ Tổng chu kỳ hoàn thành: {self.total_cycles:<18} │", flush=True)
+        print(f"└─────────────────────────────────────────────────────┘", flush=True)
 
 
 def execute_current_activity(tracker: ActivityTracker) -> bool:
@@ -145,7 +151,9 @@ def main():
     
     try:
         while True:
-            print(f"\n--- Hoạt Động {tracker.get_current_entries() + 1} ---")
+            print(f"\n🔥━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🔥", flush=True)
+            print(f"🔥                        HOẠT ĐỘNG {tracker.get_current_entries() + 1:<3}                        🔥", flush=True)
+            print(f"🔥━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🔥", flush=True)
             tracker.print_status()
             
             # Execute current activity
@@ -153,18 +161,24 @@ def main():
             
             if success:
                 tracker.increment_current_entries()
-                print(f"Hoạt động hoàn thành thành công", flush=True)
+                print(f"✅ Hoạt động hoàn thành thành công", flush=True)
             else:
-                print("Hoạt động thất bại, sẽ thử lại sau khi chuyển nếu cần", flush=True)
+                print("❌ Hoạt động thất bại, sẽ thử lại sau khi chuyển nếu cần", flush=True)
                 tracker.increment_current_entries()
+            
+            # Check for reconnection needs
+            print(f"\n🔌 Kiểm tra kết nối...", flush=True)
+            reconnect_result = execute_reconnect_sequence()
+            if reconnect_result:
+                print("🔌 Đã kết nối lại thành công", flush=True)
             
             # Switch to next activity after each cycle
             if tracker.should_switch_activity():
-                print("\nChuyển sang hoạt động tiếp theo", flush=True)
+                print(f"\n⚡⚡⚡ ĐANG CHUYỂN ĐỔII HOẠT ĐỘNG TIẾP THEO ⚡⚡⚡", flush=True)
                 tracker.switch_activity()
                 
                 # Wait before starting next activity
-                print(f"Chờ {Config.ACTIVITY_SWITCH_DELAY}s trước khi bắt đầu hoạt động tiếp theo...", flush=True)
+                print(f"⏰ Chờ {Config.ACTIVITY_SWITCH_DELAY}s trước khi bắt đầu hoạt động tiếp theo...", flush=True)
                 time.sleep(Config.ACTIVITY_SWITCH_DELAY)
             
     except KeyboardInterrupt:

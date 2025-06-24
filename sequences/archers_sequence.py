@@ -5,12 +5,14 @@ import pyautogui
 import time
 import sys
 import os
+import random
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from bot_utils import ensure_assets_directory
+from bot_utils import ensure_assets_directory, move_mouse_zigzag
 
 try:
     from .shared_utils import (
         try_click_button,
+        try_click_button_silent,
         retry_with_esc,
         check_and_click_go_home,
         check_and_click_close_esc,
@@ -20,6 +22,7 @@ try:
 except ImportError:
     from shared_utils import (
         try_click_button,
+        try_click_button_silent,
         retry_with_esc,
         check_and_click_go_home,
         check_and_click_close_esc,
@@ -34,6 +37,8 @@ class AssetPaths:
     TROOP_HOUSE = f"{BASE_DIR}/archers_house.png"
     TROOP_TRAIN = f"{BASE_DIR}/archers_train.png"
     CONFIRM_TRAIN = f"{BASE_DIR}/confirm_train.png"
+    ADD_RSS = f"{BASE_DIR}/add_rss.png"
+    ARCHERS_TRAINING_CHECK = f"{BASE_DIR}/archers_training_check.png"
 
 
 def check_confirm_train_available() -> bool:
@@ -45,12 +50,44 @@ def check_confirm_train_available() -> bool:
         return False
 
 
+def check_archers_training_check() -> bool:
+    """Check if archers training check is found on screen"""
+    try:
+        location = pyautogui.locateOnScreen(AssetPaths.ARCHERS_TRAINING_CHECK, confidence=0.9)
+        if location:
+            print("Archers training check found - ending session", flush=True)
+            return True
+        return False
+    except pyautogui.ImageNotFoundException:
+        return False
+    except Exception as e:
+        print(f"Error checking archers training check: {e}", flush=True)
+        return False
+
+
+def check_and_click_add_rss() -> bool:
+    """Check for ADD_RSS and click if found"""
+    try:
+        if try_click_button_silent(AssetPaths.ADD_RSS):
+            print("ADD_RSS found - clicking it", flush=True)
+            time.sleep(Config.STEP_DELAY())
+            return True
+        return False
+    except Exception as e:
+        print(f"Error checking ADD_RSS: {e}", flush=True)
+        return False
+
+
 def execute_archers_sequence() -> bool:
     """Execute archers training sequence"""
     try:
         check_and_click_help_button()
         check_and_click_close_esc()
         check_and_click_go_home()
+        
+        # Check archers training check - if found, end session
+        if check_archers_training_check():
+            return False
         
         # Click troop house (2 times)
         if not try_click_button(AssetPaths.TROOP_HOUSE):
@@ -67,6 +104,14 @@ def execute_archers_sequence() -> bool:
             print("Confirm train found - proceeding with training", flush=True)
             if not retry_with_esc(AssetPaths.CONFIRM_TRAIN):
                 return False
+            
+            # After confirm train click, check for ADD_RSS
+            if check_and_click_add_rss():
+                # If ADD_RSS was found and clicked, click CONFIRM_TRAIN again
+                print("ADD_RSS clicked - clicking CONFIRM_TRAIN again", flush=True)
+                if not retry_with_esc(AssetPaths.CONFIRM_TRAIN):
+                    return False
+            
         else:
             print("Confirm train not found - pressing ESC and ending session", flush=True)
             pyautogui.press('escape')
@@ -98,8 +143,10 @@ def main():
             
             if execute_archers_sequence():
                 print("Archers training cycle completed successfully", flush=True)
+                print("//============================================", flush=True)
             else:
                 print("Archers training cycle failed, retrying...", flush=True)
+                print("//============================================", flush=True)
             
             time.sleep(Config.STEP_DELAY())
             
