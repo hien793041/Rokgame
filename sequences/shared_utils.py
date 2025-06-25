@@ -44,6 +44,23 @@ def try_click_button_silent(button_path: str) -> bool:
     return click_button(button_path)
 
 
+def check_and_click_if_found(button_path: str, button_name: str, confidence: float = 0.7) -> bool:
+    """Check if button is found and click it if available, otherwise continue"""
+    try:
+        location = pyautogui.locateOnScreen(button_path, confidence=confidence)
+        if location is not None:
+            print(f"{button_name} found - clicking it", flush=True)
+            pyautogui.click(location)
+            time.sleep(Config.STEP_DELAY())
+            return True
+        else:
+            print(f"{button_name} not found - continuing", flush=True)
+            return False
+    except Exception as e:
+        print(f"Error checking {button_name}: {e}", flush=True)
+        return False
+
+
 def check_and_click_go_home() -> bool:
     """Check go home button and press space if found"""
     try:

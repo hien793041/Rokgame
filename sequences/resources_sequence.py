@@ -12,6 +12,7 @@ try:
         check_and_click_go_outside,
         check_and_click_close_esc,
         check_and_click_help_button,
+        check_and_click_if_found,
         Config
     )
 except ImportError:
@@ -21,6 +22,7 @@ except ImportError:
         check_and_click_go_outside,
         check_and_click_close_esc,
         check_and_click_help_button,
+        check_and_click_if_found,
         Config
     )
 
@@ -33,10 +35,13 @@ class AssetPaths:
     GO_RSS = f"{BASE_DIR}/go.png"
     DA_RSS = f"{BASE_DIR}/da.png"
     JOAN_RSS = f"{BASE_DIR}/joan.png"
+    GAIUS_RSS = f"{BASE_DIR}/gaius.png"
+    CONSTANCE_RSS = f"{BASE_DIR}/constance.png"
     CONFIRM_FIND = f"{BASE_DIR}/confirm_find_button.png"
     GATHER = f"{BASE_DIR}/gather.png"
     ADD_TROOP = f"{BASE_DIR}/add_troop_button.png"
     SEND_TROOP = f"{BASE_DIR}/send_troop_button.png"
+    REMOVE_SECOND_COMMANDER = f"{BASE_DIR}/remove_second_commander.png"
 
 
 def check_joan_rss():
@@ -53,6 +58,33 @@ def check_joan_rss():
         print("Joan RSS check failed - error occurred", flush=True)
         return False
 
+def check_gaius_rss():
+    """Check if Gaius RSS is available and print result"""
+    try:
+        location = pyautogui.locateOnScreen(AssetPaths.GAIUS_RSS, confidence=0.8)
+        if location is not None:
+            print("Gaius RSS found - resource available", flush=True)
+            return True
+        else:
+            print("Gaius RSS not found - resource not available", flush=True)
+            return False
+    except Exception:
+        print("Gaius RSS check failed - error occurred", flush=True)
+        return False
+
+def check_constance_rss():
+    """Check if Constance RSS is available and print result"""
+    try:
+        location = pyautogui.locateOnScreen(AssetPaths.CONSTANCE_RSS, confidence=0.8)
+        if location is not None:
+            print("Constance RSS found - resource available", flush=True)
+            return True
+        else:
+            print("Constance RSS not found - resource not available", flush=True)
+            return False
+    except Exception:
+        print("Constance RSS check failed - error occurred", flush=True)
+        return False
 
 def execute_resource_gathering():
     """Execute resource gathering sequence when Joan RSS not found"""
@@ -67,8 +99,8 @@ def execute_resource_gathering():
             return False
         
         # Randomly select one of the resource types
-        # resource_options = [AssetPaths.LUA_RSS, AssetPaths.GO_RSS, AssetPaths.DA_RSS]
-        resource_options = [AssetPaths.LUA_RSS, AssetPaths.GO_RSS]
+        resource_options = [AssetPaths.LUA_RSS, AssetPaths.GO_RSS, AssetPaths.DA_RSS]
+        # resource_options = [AssetPaths.LUA_RSS, AssetPaths.GO_RSS]
         # resource_options = [AssetPaths.GO_RSS]
         selected_resource = random.choice(resource_options)
         resource_name = selected_resource.split('/')[-1].replace('.png', '')
@@ -88,6 +120,9 @@ def execute_resource_gathering():
         # Click ADD_TROOP
         if not retry_with_esc(AssetPaths.ADD_TROOP):
             return False
+        
+        # Check if remove second commander button is found and click it
+        check_and_click_if_found(AssetPaths.REMOVE_SECOND_COMMANDER, "Remove second commander")
         
         # Click SEND_TROOP
         if not retry_with_esc(AssetPaths.SEND_TROOP):
@@ -117,7 +152,7 @@ def main():
         while True:
             print("Starting resources cycle...", flush=True)
             
-            if check_joan_rss():
+            if check_joan_rss() and check_gaius_rss() and check_constance_rss():
                 print("Joan RSS available - no gathering needed", flush=True)
             else:
                 print("Starting resource gathering sequence...", flush=True)

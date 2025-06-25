@@ -69,12 +69,16 @@ def check_confirm_train_available() -> bool:
 def check_cavalry_training_check() -> bool:
     """Check if cavalry training check is found on screen"""
     try:
-        location = pyautogui.locateOnScreen(AssetPaths.CAVALRY_TRAINING_CHECK, confidence=0.9)
+        location = pyautogui.locateOnScreen(AssetPaths.CAVALRY_TRAINING_CHECK, confidence=0.6)
         if location:
             print("Cavalry training check found - ending session", flush=True)
+            center_x = location.left + location.width // 2
+            center_y = location.top + location.height // 2
+            move_mouse_zigzag(center_x, center_y)
             return True
         return False
     except pyautogui.ImageNotFoundException:
+        print("Cavalry training check image not found", flush=True)
         return False
     except Exception as e:
         print(f"Error checking cavalry training check: {e}", flush=True)
@@ -97,8 +101,8 @@ def check_and_click_add_rss() -> bool:
 def execute_cavalry_sequence() -> bool:
     """Execute cavalry training sequence"""
     try:
-        check_and_click_help_button()
         check_and_click_close_esc()
+        check_and_click_help_button()
         check_and_click_go_home()
         
         # Check cavalry training check - if found, end session

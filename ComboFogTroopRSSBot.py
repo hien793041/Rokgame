@@ -17,7 +17,7 @@ from sequences import (
     execute_cavalry_sequence,
     execute_siege_sequence
 )
-from sequences.resources_requence import check_joan_rss, execute_resource_gathering
+from sequences.resources_sequence import check_joan_rss, execute_resource_gathering
 from sequences.reconnect_sequence import execute_reconnect_sequence
 
 # Global flag for F12 stop signal

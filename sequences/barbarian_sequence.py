@@ -96,7 +96,7 @@ class AssetPaths:
     TROOP_BACK = f"{BASE_DIR}/troop_back.png"
 
 # Stamina management constants
-MIN_STAMINA = 29
+MIN_STAMINA = 39
 
 def check_troop_available() -> bool:
     """Check if troops are available"""
@@ -154,7 +154,7 @@ def find_stamina_check_position():
         _, max_val, _, max_loc = cv2.minMaxLoc(result)
         
         # Check if match is good enough
-        if max_val > 0.7:
+        if max_val > 0.6:
             h, w = template_gray.shape
             print(f"Stamina check found with confidence: {max_val:.3f}")
             return (max_loc[0], max_loc[1], w, h)  # Return top-left corner and dimensions
@@ -283,6 +283,8 @@ def execute_barbarian_farm_sequence(combo_mode: bool = False) -> str:
     current_stamina = get_current_stamina()
     if current_stamina == 0:
         print("Could not detect stamina, proceeding anyway", flush=True)
+        pyautogui.press('escape')
+        time.sleep(0.5)
     elif current_stamina <= MIN_STAMINA:
         print(f"Stamina too low ({current_stamina} <= {MIN_STAMINA})", flush=True)
         pyautogui.press('escape')

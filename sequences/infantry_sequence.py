@@ -69,12 +69,16 @@ def check_confirm_train_available() -> bool:
 def check_infantry_training_check() -> bool:
     """Check if infantry training check is found on screen"""
     try:
-        location = pyautogui.locateOnScreen(AssetPaths.INFANTRY_TRAINING_CHECK, confidence=0.9)
+        location = pyautogui.locateOnScreen(AssetPaths.INFANTRY_TRAINING_CHECK, confidence=0.6)
         if location:
             print("Infantry training check found - ending session", flush=True)
+            center_x = location.left + location.width // 2
+            center_y = location.top + location.height // 2
+            move_mouse_zigzag(center_x, center_y)
             return True
         return False
     except pyautogui.ImageNotFoundException:
+        print("Infantry training check image not found", flush=True)
         return False
     except Exception as e:
         print(f"Error checking infantry training check: {e}", flush=True)
@@ -97,8 +101,8 @@ def check_and_click_add_rss() -> bool:
 def execute_infantry_sequence() -> bool:
     """Execute infantry training sequence"""
     try:
-        check_and_click_help_button()
         check_and_click_close_esc()
+        check_and_click_help_button()
         check_and_click_go_home()
         
         # Check infantry training check - if found, end session

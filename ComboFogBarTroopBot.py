@@ -67,8 +67,14 @@ class ActivityTracker:
             ActivityType.FOG_SCOUT,
             ActivityType.BARBARIAN_FARM,
             ActivityType.INFANTRY,
+            ActivityType.FOG_SCOUT,
+            ActivityType.BARBARIAN_FARM,
             ActivityType.ARCHERS,
+            ActivityType.FOG_SCOUT,
+            ActivityType.BARBARIAN_FARM,
             ActivityType.CAVALRY,
+            ActivityType.FOG_SCOUT,
+            ActivityType.BARBARIAN_FARM,
             ActivityType.SIEGE
         ]
         self.current_index = 0
