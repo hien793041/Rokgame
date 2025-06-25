@@ -6,8 +6,24 @@ import time
 import sys
 import os
 import random
+import threading
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from bot_utils import ensure_assets_directory, move_mouse_zigzag
+
+# Global flag for F12 stop signal
+stop_bot_flag = threading.Event()
+
+def monitor_f12_key():
+    """Monitor for F12 key press to stop the bot"""
+    try:
+        import keyboard
+        keyboard.wait('f12')
+        print("F12 pressed - Stopping bot...", flush=True)
+        stop_bot_flag.set()
+    except ImportError:
+        pass
+    except Exception:
+        pass
 
 try:
     from .shared_utils import (
@@ -132,13 +148,23 @@ def main():
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     
     print(f"RoK Cavalry Training Bot starting in {Config.STEP_DELAY()} seconds...")
+    print("🔴 Press F12 anytime to stop the bot")
     time.sleep(Config.STEP_DELAY())
     
     pyautogui.FAILSAFE = True
     pyautogui.PAUSE = 0.3
     
+    # Start F12 key monitoring in a separate thread
+    f12_thread = threading.Thread(target=monitor_f12_key, daemon=True)
+    f12_thread.start()
+    
     try:
         while True:
+            # Check if F12 was pressed
+            if stop_bot_flag.is_set():
+                print("🛑 Bot stopped by F12 key press", flush=True)
+                break
+                
             print("Starting cavalry training cycle...", flush=True)
             
             if execute_cavalry_sequence():

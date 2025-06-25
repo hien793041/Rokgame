@@ -8,9 +8,25 @@ import os
 import cv2
 import numpy as np
 import re
+import threading
 from datetime import datetime
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from bot_utils import ensure_assets_directory
+from bot_utils import ensure_assets_directory, move_mouse_zigzag
+
+# Global flag for F12 stop signal
+stop_bot_flag = threading.Event()
+
+def monitor_f12_key():
+    """Monitor for F12 key press to stop the bot"""
+    try:
+        import keyboard
+        keyboard.wait('f12')
+        print("F12 pressed - Stopping bot...", flush=True)
+        stop_bot_flag.set()
+    except ImportError:
+        pass
+    except Exception:
+        pass
 
 # Stamina detection imports
 try:
@@ -65,10 +81,12 @@ class AssetPaths:
     CONFIRM_FIND = f"{BASE_DIR}/confirm_find_button.png"
     ATTACK = f"{BASE_DIR}/attack_button.png"
     COMMANDER = f"{BASE_DIR}/commander_barbarian.png"
-    COMMANDER_BACK = f"{BASE_DIR}/commander_back.png"
-    ADD_TROOP = f"{BASE_DIR}/icon_troop_available.png"
+    ADD_TROOP = f"{BASE_DIR}/commander_barbarian.png"  # Same as COMMANDER
     SEND_TROOP = f"{BASE_DIR}/send_troop_available.png"
     TROOP_AVAILABLE = f"{BASE_DIR}/icon_troop_available.png"
+    COMMANDER_ONDUTY = f"{BASE_DIR}/commander_onduty.png"
+    COMMANDER_BACK = f"{BASE_DIR}/commander_onduty.png"  # Same as COMMANDER_ONDUTY
+    HOME_CENTER = f"{BASE_DIR}/home_center.png"
     # Alternative buttons when no commander
     ADD_TROOP_ALT = f"{BASE_DIR}/add_troop_button.png"
     SEND_TROOP_ALT = f"{BASE_DIR}/send_troop_button.png"
@@ -78,16 +96,23 @@ class AssetPaths:
     TROOP_BACK = f"{BASE_DIR}/troop_back.png"
 
 # Stamina management constants
-MIN_STAMINA = 3000
+MIN_STAMINA = 29
 
 def check_troop_available() -> bool:
     """Check if troops are available"""
     try:
-        location = pyautogui.locateOnScreen(AssetPaths.TROOP_AVAILABLE, confidence=0.6)
+        location = pyautogui.locateOnScreen(AssetPaths.TROOP_AVAILABLE, confidence=0.7)
         return location is not None
     except Exception:
         return False
 
+def check_commander_onduty() -> bool:
+    """Check if commander is on duty"""
+    try:
+        location = pyautogui.locateOnScreen(AssetPaths.COMMANDER_ONDUTY, confidence=0.6)
+        return location is not None
+    except Exception:
+        return False
 
 def check_commander_available() -> bool:
     """Check if commander is available"""
@@ -171,19 +196,24 @@ def get_current_stamina() -> int:
                 text = text.strip()
                 
                 if text and ('/' in text) and any(c.isdigit() for c in text):
-                    # Look for stamina patterns
+                    # Look for stamina patterns - Most specific patterns first
                     patterns = [
-                        r'(\d+)/1\.500',         # 352/1.500 (period separator)
-                        r'(\d+)/1,500',          # 352/1,500 (comma separator)  
-                        r'(\d+)/1500',           # 352/1500 (no separator)
-                        r'(\d+)/\d+',            # Any XXX/YYY pattern
+                        r'(\d+[,.]\d+)/1[,.]500',     # 1,015/1.500 or 1.015/1,500 (with separators)
+                        r'(\d+)/1[,.]500',            # 352/1.500 or 352/1,500 (no separator in stamina)
+                        r'(\d+[,.]\d+)/\d+',          # Any XXX,XXX/YYY or XXX.XXX/YYY pattern
+                        r'(\d+)/\d+',                 # Any XXX/YYY pattern (fallback)
                     ]
                     
                     for pattern in patterns:
                         matches = re.findall(pattern, text)
                         if matches:
-                            stamina_value = int(matches[0])
-                            print(f"Current stamina: {stamina_value}")
+                            print(f"OCR text: '{text}'", flush=True)
+                            print(f"Matched pattern: {pattern}", flush=True)
+                            print(f"Raw match: '{matches[0]}'", flush=True)
+                            # Remove separators (periods, commas) from the stamina value
+                            stamina_str = matches[0].replace('.', '').replace(',', '')
+                            stamina_value = int(stamina_str)
+                            print(f"Parsed stamina: {stamina_value}", flush=True)
                             return stamina_value
             except Exception as e:
                 continue
@@ -227,11 +257,28 @@ def execute_barbarian_farm_sequence(combo_mode: bool = False) -> str:
     """Execute barbarian farm sequence with stamina management"""
     # Step 1: Setup - Press ESC to clear UI
     check_and_click_help_button()
+    # Check commander and troop availability logic
+    print("Checking commander on duty status...", flush=True)
+    commander_onduty = check_commander_onduty()
+    print(f"Commander on duty: {commander_onduty}", flush=True)
+    
+    print("Checking troop availability...", flush=True)
+    troops_available = check_troop_available()
+    print(f"Troops available: {troops_available}", flush=True)
+    
+    if commander_onduty and not troops_available:
+        print("Commander on duty but no troops available - ending session", flush=True)
+        return "FAILED"
+    else:
+        print("===> proceeding with attack", flush=True)
+
     check_and_click_close_esc()
     check_and_click_go_outside()
+
     print("Open setting by ESC", flush=True)
     pyautogui.press('escape')
     time.sleep(0.5)
+
     # Step 2: Check stamina
     current_stamina = get_current_stamina()
     if current_stamina == 0:
@@ -245,7 +292,14 @@ def execute_barbarian_farm_sequence(combo_mode: bool = False) -> str:
         print(f"Stamina sufficient ({current_stamina} > {MIN_STAMINA}), proceeding with attack", flush=True)
         pyautogui.press('escape')
         time.sleep(0.5)
-    
+
+    # Check and click HOME_CENTER if found
+    if try_click_button_silent(AssetPaths.HOME_CENTER):
+        print("HOME_CENTER found - clicked it", flush=True)
+        time.sleep(0.5)
+    else:
+        print("HOME_CENTER not found - continuing process", flush=True)
+
     # Step 3-5: Normal barbarian attack flow
     # Execute initial sequence
     if not try_click_button(AssetPaths.FIND_BAR):
@@ -261,20 +315,12 @@ def execute_barbarian_farm_sequence(combo_mode: bool = False) -> str:
     # Smart flow based on commander availability
     if check_commander_available():
         print("Commander found - using normal flow", flush=True)
-        # Check troops and use normal buttons
-        if not check_troop_available():
-            print("No troops available, pressing ESC and ending session", flush=True)
-            pyautogui.press('escape')
-            time.sleep(Config.STEP_DELAY())
-            return "FAILED"
-        
         if not retry_with_esc(AssetPaths.ADD_TROOP):
             return "FAILED"
         if not retry_with_esc(AssetPaths.SEND_TROOP):
             return "FAILED"
     else:
         print("No commander found - using alternative flow", flush=True)
-        # No commander - use alternative buttons
         if not retry_with_esc(AssetPaths.ADD_TROOP_ALT):
             return "FAILED"
         if not retry_with_esc(AssetPaths.SELECT_TROOP_ALT):
@@ -292,14 +338,23 @@ def main():
     sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
     
     print(f"RoK Barbarian Farm Bot starting in {Config.STEP_DELAY()} seconds...")
+    print("🔴 Press F12 anytime to stop the bot")
     time.sleep(Config.STEP_DELAY())
     
     pyautogui.FAILSAFE = True
     pyautogui.PAUSE = 0.3
     
+    # Start F12 key monitoring in a separate thread
+    f12_thread = threading.Thread(target=monitor_f12_key, daemon=True)
+    f12_thread.start()
+    
     try:
         cycle_count = 1
         while True:
+            # Check if F12 was pressed
+            if stop_bot_flag.is_set():
+                print("🛑 Bot stopped by F12 key press", flush=True)
+                break
             print(f"\n🔥━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🔥", flush=True)
             print(f"🔥                      BARBARIAN FARM CHU KỲ {cycle_count:<3}                   🔥", flush=True)
             print(f"🔥━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🔥", flush=True)

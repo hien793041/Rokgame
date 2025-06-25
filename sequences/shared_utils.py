@@ -45,9 +45,13 @@ def try_click_button_silent(button_path: str) -> bool:
 
 
 def check_and_click_go_home() -> bool:
-    """Check and click go home button if found"""
+    """Check go home button and press space if found"""
     try:
-        if try_click_button_silent(SharedAssetPaths.GO_HOME):
+        # Check if GO_HOME button exists
+        location = pyautogui.locateOnScreen(SharedAssetPaths.GO_HOME, confidence=0.7)
+        if location is not None:
+            print("GO_HOME found - pressing space", flush=True)
+            pyautogui.press('space')
             time.sleep(Config.STEP_DELAY())
             return True
         return False
@@ -56,9 +60,13 @@ def check_and_click_go_home() -> bool:
 
 
 def check_and_click_go_outside() -> bool:
-    """Check and click go outside button if found"""
+    """Check go outside button and press space if found"""
     try:
-        if try_click_button_silent(SharedAssetPaths.GO_OUTSIDE):
+        # Check if GO_OUTSIDE button exists
+        location = pyautogui.locateOnScreen(SharedAssetPaths.GO_OUTSIDE, confidence=0.7)
+        if location is not None:
+            print("GO_OUTSIDE found - pressing space", flush=True)
+            pyautogui.press('space')
             time.sleep(Config.STEP_DELAY())
             return True
         return False

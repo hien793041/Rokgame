@@ -8,9 +8,26 @@ sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding='utf-8')
 import pyautogui
 import time
 import random
+import threading
 from enum import Enum
 from bot_utils import ensure_assets_directory
 from sequences import execute_fog_scout_sequence, execute_barbarian_farm_sequence
+
+# Global flag for F12 stop signal
+stop_bot_flag = threading.Event()
+
+def monitor_f12_key():
+    """Monitor for F12 key press to stop the bot"""
+    try:
+        import keyboard
+        print("F12 key monitoring active - Press F12 to stop the bot", flush=True)
+        keyboard.wait('f12')
+        print("F12 pressed - Stopping bot...", flush=True)
+        stop_bot_flag.set()
+    except ImportError:
+        print("keyboard module not available - F12 monitoring disabled", flush=True)
+    except Exception as e:
+        print(f"Error in F12 monitoring: {e}", flush=True)
 
 
 class ActivityType(Enum):
@@ -151,6 +168,7 @@ def main():
     """Main execution of combo bot"""
     print(f"RoK Combo Bot (Fog + Barbarian) bắt đầu sau {Config.STARTUP_DELAY} giây...")
     print("Cấu hình: Fog Scout → Barbarian Farm → Lặp lại")
+    print("🔴 Press F12 anytime to stop the bot")
     time.sleep(Config.STARTUP_DELAY)
     
     # Configure PyAutoGUI
@@ -159,8 +177,16 @@ def main():
     
     tracker = ActivityTracker()
     
+    # Start F12 key monitoring in a separate thread
+    f12_thread = threading.Thread(target=monitor_f12_key, daemon=True)
+    f12_thread.start()
+    
     try:
         while True:
+            # Check if F12 was pressed
+            if stop_bot_flag.is_set():
+                print("🛑 Bot stopped by F12 key press", flush=True)
+                break
             print(f"\n🔥━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🔥", flush=True)
             print(f"🔥                           CHU KỲ {tracker.get_current_entries() + 1:<3}                            🔥", flush=True)
             print(f"🔥━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━🔥", flush=True)

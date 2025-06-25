@@ -69,6 +69,7 @@ def execute_resource_gathering():
         # Randomly select one of the resource types
         # resource_options = [AssetPaths.LUA_RSS, AssetPaths.GO_RSS, AssetPaths.DA_RSS]
         resource_options = [AssetPaths.LUA_RSS, AssetPaths.GO_RSS]
+        # resource_options = [AssetPaths.GO_RSS]
         selected_resource = random.choice(resource_options)
         resource_name = selected_resource.split('/')[-1].replace('.png', '')
         print(f"Selected resource: {resource_name}", flush=True)
