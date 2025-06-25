@@ -13,6 +13,8 @@ try:
         check_and_click_close_esc,
         check_and_click_help_button,
         check_and_click_if_found,
+        try_click_button_silent,
+        move_mouse_zigzag,
         Config
     )
 except ImportError:
@@ -23,6 +25,8 @@ except ImportError:
         check_and_click_close_esc,
         check_and_click_help_button,
         check_and_click_if_found,
+        try_click_button_silent,
+        move_mouse_zigzag,
         Config
     )
 
@@ -37,11 +41,14 @@ class AssetPaths:
     JOAN_RSS = f"{BASE_DIR}/joan.png"
     GAIUS_RSS = f"{BASE_DIR}/gaius.png"
     CONSTANCE_RSS = f"{BASE_DIR}/constance.png"
+    SARKA_RSS = f"{BASE_DIR}/sarka.png"
     CONFIRM_FIND = f"{BASE_DIR}/confirm_find_button.png"
     GATHER = f"{BASE_DIR}/gather.png"
     ADD_TROOP = f"{BASE_DIR}/add_troop_button.png"
     SEND_TROOP = f"{BASE_DIR}/send_troop_button.png"
     REMOVE_SECOND_COMMANDER = f"{BASE_DIR}/remove_second_commander.png"
+    SAVE_TROOP = f"{BASE_DIR}/save_troop.png"
+    HOME_CENTER = f"{BASE_DIR}/home_center.png"
 
 
 def check_joan_rss():
@@ -86,6 +93,20 @@ def check_constance_rss():
         print("Constance RSS check failed - error occurred", flush=True)
         return False
 
+def check_sarka_rss():
+    """Check if Sarka RSS is available and print result"""
+    try:
+        location = pyautogui.locateOnScreen(AssetPaths.SARKA_RSS, confidence=0.8)
+        if location is not None:
+            print("Sarka RSS found - resource available", flush=True)
+            return True
+        else:
+            print("Sarka RSS not found - resource not available", flush=True)
+            return False
+    except Exception:
+        print("Sarka RSS check failed - error occurred", flush=True)
+        return False
+
 def execute_resource_gathering():
     """Execute resource gathering sequence when Joan RSS not found"""
     try:
@@ -93,6 +114,13 @@ def execute_resource_gathering():
         check_and_click_help_button()
         check_and_click_close_esc()
         check_and_click_go_outside()
+        
+        # Check and click HOME_CENTER if found
+        if try_click_button_silent(AssetPaths.HOME_CENTER):
+            print("HOME_CENTER found - clicked it", flush=True)
+            time.sleep(0.5)
+        else:
+            print("HOME_CENTER not found - continuing process", flush=True)
         
         # Click FIND_BAR
         if not try_click_button(AssetPaths.FIND_BAR):
@@ -124,6 +152,22 @@ def execute_resource_gathering():
         # Check if remove second commander button is found and click it
         check_and_click_if_found(AssetPaths.REMOVE_SECOND_COMMANDER, "Remove second commander")
         
+        # Check if save_troop found and click 10 pixels to the left of its center
+        try:
+            location = pyautogui.locateOnScreen(AssetPaths.SAVE_TROOP, confidence=0.8)
+            if location is not None:
+                print("Save troop found - clicking 10 pixels to the left", flush=True)
+                center_x = location.left + location.width // 2
+                center_y = location.top + location.height // 2
+                click_x = center_x - 30  # Move 30 pixels to the left
+                move_mouse_zigzag(click_x, center_y)
+                pyautogui.click(click_x, center_y)
+                time.sleep(Config.STEP_DELAY())
+            else:
+                print("Save troop not found - continuing", flush=True)
+        except Exception as e:
+            print(f"Error checking save troop: {e}", flush=True)
+        
         # Click SEND_TROOP
         if not retry_with_esc(AssetPaths.SEND_TROOP):
             return False
@@ -152,8 +196,17 @@ def main():
         while True:
             print("Starting resources cycle...", flush=True)
             
-            if check_joan_rss() and check_gaius_rss() and check_constance_rss():
-                print("Joan RSS available - no gathering needed", flush=True)
+            # Check RSS commanders and count how many are available
+            rss_checks = [
+                check_joan_rss(),
+                check_gaius_rss(), 
+                check_constance_rss(),
+                check_sarka_rss()
+            ]
+            available_count = sum(rss_checks)
+            
+            if available_count >= 3:
+                print(f"RSS commanders available ({available_count}/4) - no gathering needed", flush=True)
             else:
                 print("Starting resource gathering sequence...", flush=True)
                 if execute_resource_gathering():

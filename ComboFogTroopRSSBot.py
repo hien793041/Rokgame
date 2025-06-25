@@ -17,7 +17,7 @@ from sequences import (
     execute_cavalry_sequence,
     execute_siege_sequence
 )
-from sequences.resources_sequence import check_joan_rss, execute_resource_gathering
+from sequences.resources_sequence import check_joan_rss, check_gaius_rss, check_constance_rss, check_sarka_rss, execute_resource_gathering
 from sequences.reconnect_sequence import execute_reconnect_sequence
 
 # Global flag for F12 stop signal
@@ -63,8 +63,8 @@ class ActivityTracker:
             ActivityType.INFANTRY,
             ActivityType.FOG_SCOUT,
             ActivityType.RESOURCES,
-            # ActivityType.ARCHERS,
-            # ActivityType.FOG_SCOUT,
+            ActivityType.ARCHERS,
+            ActivityType.FOG_SCOUT,
             ActivityType.RESOURCES,
             ActivityType.CAVALRY,
             ActivityType.FOG_SCOUT,
@@ -136,9 +136,17 @@ class ActivityTracker:
 def execute_current_activity(tracker: ActivityTracker) -> bool:
     """Execute the current activity"""
     if tracker.current_activity == ActivityType.RESOURCES:
-        # Resources activity has special logic
-        if check_joan_rss():
-            print("Joan RSS available - no gathering needed", flush=True)
+        # Resources activity has special logic - check if 3 out of 4 RSS commanders are available
+        rss_checks = [
+            check_joan_rss(),
+            check_gaius_rss(), 
+            check_constance_rss(),
+            check_sarka_rss()
+        ]
+        available_count = sum(rss_checks)
+        
+        if available_count >= 3:
+            print(f"RSS commanders available ({available_count}/4) - no gathering needed", flush=True)
             return True
         else:
             print("Starting resource gathering sequence...", flush=True)

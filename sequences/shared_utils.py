@@ -11,7 +11,7 @@ import random
 if __name__ == '__main__' or '.' not in __name__:
     sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from bot_utils import click_button
+from bot_utils import click_button, move_mouse_zigzag
 
 
 class Config:
